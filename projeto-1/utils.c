@@ -1,4 +1,5 @@
 #include "utils.h"
+#include "time.h"
 
 void print_arr(float **vec, int n) {
   for (int i = 0; i < n; i++)
@@ -39,6 +40,14 @@ void read_input(const char *path, float **A, float *b) {
   }
 }
 
-bool write_file(const char *path, char *buffer) {
-  return true;
+bool write_file(const char *path, char *buffer) { return true; }
+
+void measure_fn_time(void (*fn)(float **, float *), float **A, float *b) {
+  double time;
+  clock_t start = clock();
+  fn(A, b);
+  clock_t end = clock();
+  time = ((double)(end - start)) / CLOCKS_PER_SEC;
+
+  printf("Time elapsed: %lf\n", time);
 }
