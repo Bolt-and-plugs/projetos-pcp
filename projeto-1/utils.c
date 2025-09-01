@@ -36,14 +36,31 @@ void read_input(const char *path, float **A, float *b, const int n) {
   }
 }
 
+enum { NS_PER_SECOND = 1000000000 };
+
+void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td)
+{
+    td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
+    td->tv_sec  = t2.tv_sec - t1.tv_sec;
+    if (td->tv_sec > 0 && td->tv_nsec < 0)
+    {
+        td->tv_nsec += NS_PER_SECOND;
+        td->tv_sec--;
+    }
+    else if (td->tv_sec < 0 && td->tv_nsec > 0)
+    {
+        td->tv_nsec -= NS_PER_SECOND;
+        td->tv_sec++;
+    }
+}
+
 bool write_file(const char *path, char *buffer) { return true; }
 
 void measure_fn_time(void (fn)(float **, float *, int), float **A, float *b, int N) {
-  double time;
-  clock_t start = clock();
+  struct timespec start, end, _time;
+  clock_gettime(CLOCK_MONOTONIC, &start);
   fn(A, b, N);
-  clock_t end = clock();
-  time = ((double)(end - start)) / CLOCKS_PER_SEC;
-
-  printf("Time elapsed: %lf\n", time);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  sub_timespec(start, end, &_time);
+  printf("Time elapsed: %d.%.9ld\n", (int)_time.tv_sec, _time.tv_nsec);
 }

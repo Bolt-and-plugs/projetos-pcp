@@ -13,6 +13,8 @@ float **omp_matrix_mul(float **A, float **B, int n) {
   }
 
   int i, j, k;
+
+  omp_set_num_threads(16);
   #pragma omp parallel for private(i, j, k) shared(A, B, C)
   for ( i = 0; i < n; i++) {
     for (j = 0; j < n; j++) {
@@ -26,6 +28,5 @@ float **omp_matrix_mul(float **A, float **B, int n) {
 }
 
 void omp_process(float **A, float *b, int N) {
-  omp_set_num_threads(8);
   float **res = omp_matrix_mul(A, A, N);
 }
