@@ -1,8 +1,11 @@
 #ifndef _SEQ_J_H_
 #define _SEQ_J_H_
 
-float **matrix_mul(float **A, float **B);
+#include "stdio.h"
+#include "stdlib.h"
 
-void seq_process(float **A, float *b);
+float **matrix_mul(float **A, float **B, int n);
+
+void seq_process(float **A, float *b, int N);
 
 #endif

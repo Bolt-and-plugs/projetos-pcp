@@ -7,7 +7,7 @@ void print_arr(float **vec, int n) {
       printf("%f | ", vec[i][j]);
 }
 
-void read_input(const char *path, float **A, float *b) {
+void read_input(const char *path, float **A, float *b, const int n) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
   int i = 0, j = 0;
@@ -16,8 +16,6 @@ void read_input(const char *path, float **A, float *b) {
     perror("Error opening file");
     exit(EXIT_FAILURE);
   }
-
-  int n = 2000;
 
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
@@ -28,8 +26,6 @@ void read_input(const char *path, float **A, float *b) {
       }
     }
   }
-
-  print_arr(A, 2000);
 
   for (int i = 0; i < n; i++) {
     if (fscanf(fp, "%f", &b[i]) != 1) {
@@ -42,10 +38,10 @@ void read_input(const char *path, float **A, float *b) {
 
 bool write_file(const char *path, char *buffer) { return true; }
 
-void measure_fn_time(void (*fn)(float **, float *), float **A, float *b) {
+void measure_fn_time(void (fn)(float **, float *, int), float **A, float *b, int N) {
   double time;
   clock_t start = clock();
-  fn(A, b);
+  fn(A, b, N);
   clock_t end = clock();
   time = ((double)(end - start)) / CLOCKS_PER_SEC;
 
