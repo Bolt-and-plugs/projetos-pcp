@@ -72,9 +72,9 @@ static bool has_solution(long double **A, int N)  {
   return must_continue;
 }
 
-static void write_x_to_file(long double *x, int N) {
+static void write_x_to_file(long double *x, int N) { 
   char buffer[256];
-  sprintf(buffer, "outputs/seq/mat-%d-%d.dat", N, N);
+  sprintf(buffer, "outputs/omp/mat-%d-%d.dat", N, N); // TODO change path to handle num_threads, chunk_size and scheduler_method
   FILE *fp = fopen(buffer, "w");
 
   if (!fp) {
