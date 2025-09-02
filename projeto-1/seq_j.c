@@ -23,5 +23,21 @@ float **matrix_mul(float **A, float **B, int n) {
 }
 
 void seq_process(float **A, float *b, int N) {
-  float **res = matrix_mul(A, A, N);
+  float *x[2]; // so precisamos da iteracao k + 1 e k para o teste de parada
+  long long it = 0;
+
+  for (int i = 0; i < 2; i++) {
+    x[i] = calloc(sizeof(float), N);
+  }
+
+  do {
+    printf("Iteração de número %Ld\n", it);
+
+    for (int i = 0; i < N; i++) {
+      // iterar por aqui
+    }
+    
+    it++;
+  }
+  while (stop_test(x[0], x[1], 10e-5, N));
 }

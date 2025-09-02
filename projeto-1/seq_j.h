@@ -3,6 +3,7 @@
 
 #include "stdio.h"
 #include "stdlib.h"
+#include "utils.h"
 
 float **matrix_mul(float **A, float **B, int n);
 
