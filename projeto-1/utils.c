@@ -57,20 +57,11 @@ void measure_fn_time(void(fn)(long double **, long double *, int), long double *
   printf("Time elapsed: %d.%.9ld\n", (int)_time.tv_sec, _time.tv_nsec);
 }
 
-bool stop_test(long double *x1, long double *x2, long double precision, int N) {
-  for (int i = 0; i < N; i++) {
-    long double result = x2[i] - x1[i] >= 0 ? x2[i] - x1[i] : (x2[i] - x1[i]) * -1;
-    if (result <= precision)
-      return false;
-  }
-  return true;
-}
 
 long double *arr_norm(long double *x1, long double *x2, int N) {
   long double *x3 = malloc(sizeof(long double) * N);
   for (int i = 0; i < N; i++) {
-    long double result = x2[i] - x1[i];
-    x3[i] = result >= 0 ? result : result * -1;
+    x3[i] = fabsl(x2[i] - x1[i]);
   }
 
   return x3;

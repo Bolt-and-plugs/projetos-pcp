@@ -4,6 +4,9 @@
 #include "omp.h"
 #include "stdio.h"
 #include "stdlib.h"
+#include "stdbool.h"
+#include "unistd.h"
+#include "utils.h"
 
 long double **parallel_matrix_mul(long double **A, long double **B);
 

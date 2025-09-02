@@ -26,6 +26,7 @@ int main() {
 
   read_input("inputs/linear3.dat", coeficients, response, N);
 
+
   measure_fn_time(seq_process, coeficients, response, N);
   measure_fn_time(omp_process, coeficients, response, N);
 

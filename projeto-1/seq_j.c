@@ -23,6 +23,15 @@ long double **matrix_mul(long double **A, long double **B, int n) {
   return C;
 }
 
+bool stop_test(long double *x1, long double *x2, long double precision, int N) {
+  for (int i = 0; i < N; i++) {
+    long double result = x2[i] - x1[i] >= 0 ? x2[i] - x1[i] : (x2[i] - x1[i]) * -1;
+    if (result <= precision)
+      return false;
+  }
+  return true;
+}
+
 bool has_solution(long double **A, int N)  {
   // criterio da linha
   long double sum = 0 ;
@@ -70,7 +79,6 @@ void seq_process(long double **A, long double *b, int N) {
   int curr_x = 0;
 
   do {
-    printf("Iteração de número %Ld\n", it);
     curr_x = !curr_x;
     for (int i = 0; i < N; i++) {
       long double inverted_aii = 1.0L / A[i][i];
