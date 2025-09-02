@@ -5,8 +5,8 @@
 #include "stdlib.h"
 #include "utils.h"
 
-float **matrix_mul(float **A, float **B, int n);
+long double **matrix_mul(long double **A, long double **B, int n);
 
-void seq_process(float **A, float *b, int N);
+void seq_process(long double **A, long double *b, int N);
 
 #endif

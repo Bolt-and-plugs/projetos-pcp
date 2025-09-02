@@ -2,7 +2,7 @@
 #include "math.h"
 #include "time.h"
 
-void read_input(const char *path, float **A, float *b, const int n) {
+void read_input(const char *path, long double **A, long double *b, const int n) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
   int i = 0, j = 0;
@@ -14,7 +14,7 @@ void read_input(const char *path, float **A, float *b, const int n) {
 
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      if (fscanf(fp, "%f", &A[i][j]) != 1) {
+      if (fscanf(fp, "%Lf", &A[i][j]) != 1) {
         fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
         fclose(fp);
         exit(EXIT_FAILURE);
@@ -23,7 +23,7 @@ void read_input(const char *path, float **A, float *b, const int n) {
   }
 
   for (int i = 0; i < n; i++) {
-    if (fscanf(fp, "%f", &b[i]) != 1) {
+    if (fscanf(fp, "%Lf", &b[i]) != 1) {
       fprintf(stderr, "Error reading vector data at b[%d]\n", i);
       fclose(fp);
       exit(EXIT_FAILURE);
@@ -47,7 +47,7 @@ void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
 
 bool write_file(const char *path, char *buffer) { return true; }
 
-void measure_fn_time(void(fn)(float **, float *, int), float **A, float *b,
+void measure_fn_time(void(fn)(long double **, long double *, int), long double **A, long double *b,
                      int N) {
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
@@ -57,35 +57,36 @@ void measure_fn_time(void(fn)(float **, float *, int), float **A, float *b,
   printf("Time elapsed: %d.%.9ld\n", (int)_time.tv_sec, _time.tv_nsec);
 }
 
-bool stop_test(float *x1, float *x2, float precision, int N) {
+bool stop_test(long double *x1, long double *x2, long double precision, int N) {
   for (int i = 0; i < N; i++) {
-    if (x2[i] - x1[i] >= precision)
+    long double result = x2[i] - x1[i] >= 0 ? x2[i] - x1[i] : (x2[i] - x1[i]) * -1;
+    if (result <= precision)
       return false;
   }
   return true;
 }
 
-float *arr_norm(float *x1, float *x2, int N) {
-  float *x3 = malloc(sizeof(float) * N);
+long double *arr_norm(long double *x1, long double *x2, int N) {
+  long double *x3 = malloc(sizeof(long double) * N);
   for (int i = 0; i < N; i++) {
-    float result = x2[i] - x1[i];
+    long double result = x2[i] - x1[i];
     x3[i] = result >= 0 ? result : result * -1;
   }
 
   return x3;
 }
 
-void print_arr(float *x, int N) {
+void print_arr(long double *x, int N) {
   for (int i = 0; i < N; i++) {
-    printf("[%f]\t", x[i]);
+    printf("[%Lf]\t", x[i]);
   }
   puts("");
 }
 
-void print_mat(float **x, int N, int M) {
+void print_mat(long double **x, int N, int M) {
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
-      printf("[%f]\t", x[i][j]);
+      printf("[%Lf]\t", x[i][j]);
     }
     puts("");
   }

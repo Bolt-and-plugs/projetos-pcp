@@ -1,10 +1,10 @@
 #include "omp_j.h"
 #include <omp.h>
 
-float **omp_matrix_mul(float **A, float **B, int n) {
-  float **C = calloc(sizeof(float *), n);
+long double **omp_matrix_mul(long double **A, long double **B, int n) {
+  long double **C = calloc(sizeof(long double *), n);
   for (int i = 0; i < n; i++) {
-    C[i] = calloc(sizeof(float), n);
+    C[i] = calloc(sizeof(long double), n);
     if (!C[i]) {
       free(C);
       perror("ERROOOO");
@@ -27,6 +27,6 @@ float **omp_matrix_mul(float **A, float **B, int n) {
   return C;
 }
 
-void omp_process(float **A, float *b, int N) {
-  float **res = omp_matrix_mul(A, A, N);
+void omp_process(long double **A, long double *b, int N) {
+  long double **res = omp_matrix_mul(A, A, N);
 }

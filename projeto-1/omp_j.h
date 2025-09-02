@@ -5,8 +5,8 @@
 #include "stdio.h"
 #include "stdlib.h"
 
-float **parallel_matrix_mul(float **A, float **B);
+long double **parallel_matrix_mul(long double **A, long double **B);
 
-void omp_process(float **A, float *b, int n);
+void omp_process(long double **A, long double *b, int n);
 
 #endif

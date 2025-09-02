@@ -1,9 +1,10 @@
 #include "seq_j.h"
+#include "unistd.h"
 
-float **matrix_mul(float **A, float **B, int n) {
-  float **C = calloc(sizeof(float *), n);
+long double **matrix_mul(long double **A, long double **B, int n) {
+  long double **C = calloc(sizeof(long double *), n);
   for (int i = 0; i < n; i++) {
-    C[i] = calloc(sizeof(float), n);
+    C[i] = calloc(sizeof(long double), n);
     if (!C[i]) {
       free(C);
       perror("ERROOOO");
@@ -22,22 +23,72 @@ float **matrix_mul(float **A, float **B, int n) {
   return C;
 }
 
-void seq_process(float **A, float *b, int N) {
-  float *x[2]; // so precisamos da iteracao k + 1 e k para o teste de parada
+bool has_solution(long double **A, int N)  {
+  // criterio da linha
+  long double sum = 0 ;
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < N; j++) {
+      if (i == j)
+        continue;
+      sum += A[i][j];
+    }
+    if (A[i][i] <= sum)
+      return false;
+  }
+  return true;
+}
+
+void write_x_to_file(long double *x, int N) {
+  char buffer[256];
+  sprintf(buffer, "outputs/seq/mat-%d-%d.dat", N, N);
+  FILE *fp = fopen(buffer, "w");
+
+  if (!fp) {
+    printf("Arquivo mal formado %s\n", buffer);
+    return;
+  }
+
+  for (int i = 0; i < N; i++)
+    fprintf(fp, "[%.4Lf]\t", x[i]);
+
+  fclose(fp);
+}
+
+void seq_process(long double **A, long double *b, int N) {
+  long double *x[2];
   long long it = 0;
 
-  for (int i = 0; i < 2; i++) {
-    x[i] = calloc(sizeof(float), N);
+  if (!has_solution(A, N)) {
+    perror("A matriz de coeficientes não possui solução através do método de jacobi");
+    exit(0);
   }
+
+  for (int i = 0; i < 2; i++) {
+    x[i] = calloc(sizeof(long double), N);
+  }
+
+  int curr_x = 0;
 
   do {
     printf("Iteração de número %Ld\n", it);
-
+    curr_x = !curr_x;
     for (int i = 0; i < N; i++) {
-      // iterar por aqui
+      long double inverted_aii = 1.0L / A[i][i];
+      long double sum = 0.0L;
+
+      for (int j = 0; j < N; j++) {
+        if (j == i) 
+          continue;
+        sum += A[i][j] * x[curr_x][j];
+
+      }
+      x[!curr_x][i] = inverted_aii * (b[i] - sum);
     }
-    
     it++;
   }
   while (stop_test(x[0], x[1], 10e-5, N));
+
+  print_arr(x[curr_x], N);
+
+  write_x_to_file(x[curr_x], N);
 }
