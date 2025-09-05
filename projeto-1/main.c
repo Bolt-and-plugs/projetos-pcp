@@ -4,6 +4,10 @@
 
 int main() {
   int N = 3;
+  char *input =  malloc(256 * sizeof(char));
+  sprintf(input, "inputs/linear%d.dat", N);
+
+  printf("Input file: %s\n", input);
 
   long double *response = malloc(N * sizeof(long double));
   long double **coeficients = malloc(N * sizeof(long double *));
@@ -24,7 +28,7 @@ int main() {
   }
 
 
-  read_input("inputs/linear3.dat", coeficients, response, N);
+  read_input(input, coeficients, response, N);
 
 
   measure_fn_time(seq_process, coeficients, response, N);
