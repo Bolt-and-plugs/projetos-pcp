@@ -4,19 +4,6 @@
 #include "string.h"
 
 int main(int argc, char **argv) {
-  // treat args 
-  // can receive N as argument
-  // if not, use default value of 3
-  // can receive omp threads as argument
-  // if not, use default value of 4
-  // can receive input file as argument
-  // if not, use default value of inputs/linear%d.dat
-  // where %d is the value of N
-  // example: ./main --N 5 --num_threads 8 --input inputs/linear5.dat
-  // give also --help
-  
-
-
   int N = 3;
   int num_threads = 4;
   char *input =  malloc(256 * sizeof(char));
@@ -39,7 +26,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  sprintf(input, "inputs/linear%d.dat", N);
+  if (input[0] == '\0')
+    sprintf(input, "inputs/linear%d.dat", N);
 
   omp_set_num_threads(num_threads);
   printf("Matrix size: %d\n", N);
