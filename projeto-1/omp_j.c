@@ -1,6 +1,6 @@
 #include "omp_j.h"
 #include "math.h"
-
+#include <string.h>
 static long double **omp_matrix_mul(long double **A, long double **B, int n) {
   long double **C = calloc(sizeof(long double *), n);
   for (int i = 0; i < n; i++) {
@@ -103,14 +103,15 @@ bool omp_stop_test(long double *x1, long double *x2, long double precision, int 
     return must_continue;
 }
 
-void omp_process(long double **A, long double *b, int N) {
+void omp_process(long double **A, long double *b, int N, int num_threads, char *schedule,int chunk) {
   long double *x[2];
   long long it = 0;
+  puts("executando");
 
-  if (!has_solution(A, N)) {
-    perror("A matriz de coeficientes não possui solução através do método de jacobi");
+  /*if (!has_solution(A, N)) {
+  #  perror("A matriz de coeficientes não possui solução através do método de jacobi");
     exit(0);
-  }
+  }*/
 
   for (int i = 0; i < 2; i++) {
     x[i] = calloc(sizeof(long double), N);
@@ -118,12 +119,23 @@ void omp_process(long double **A, long double *b, int N) {
 
   int curr_x = 0;
   // alterar threads resenha
-  omp_set_num_threads(2);
+  omp_set_num_threads(num_threads);
+  printf("Schedule :%s | Chunk: %d  ", schedule, chunk); 
   do {
     curr_x = !curr_x;
-
+    
+    if (strcmp(schedule, "static") == 0) {
+        omp_set_schedule(omp_sched_static, chunk);
+    } else if (strcmp(schedule, "dynamic") == 0) {
+        omp_set_schedule(omp_sched_dynamic, chunk);
+    } else if (strcmp(schedule, "guided") == 0) {
+        omp_set_schedule(omp_sched_guided, chunk);
+    } else {
+        printf("Aviso: Schedule inválido. Usando o padrão (runtime).\n");
+        return;
+    }
     int i;
-    #pragma omp parallel for private(i) shared(x, A, b) schedule(static)
+    #pragma omp parallel for private(i) shared(x, A, b) schedule(runtime)
     for (i = 0; i < N; i++) {
       long double inverted_aii = 1.0L / A[i][i];
       long double sum = 0.0L;
@@ -142,7 +154,7 @@ void omp_process(long double **A, long double *b, int N) {
   }
   while (omp_stop_test(x[0], x[1], 10e-5, N));
 
-  print_arr(x[curr_x], N);
+  //print_arr(x[curr_x], N);
 
   write_x_to_file(x[curr_x], N);
 }

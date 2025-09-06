@@ -10,6 +10,6 @@
 
 long double **parallel_matrix_mul(long double **A, long double **B);
 
-void omp_process(long double **A, long double *b, int n);
+void omp_process(long double **A, long double *b, int N, int num_threads, char *schedule, int chunk);
 
 #endif

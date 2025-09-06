@@ -1,0 +1,13 @@
+Time elapsed:2.789267715 |Matrix Size:2000 |Schedule:static |Chunk:0
+ |Num_Threads:2Time elapsed:3.118467750 |Matrix Size:2000 |Schedule:static |Chunk:0
+ |Num_Threads:4Time elapsed:2.586327887 |Matrix Size:2000 |Schedule:static |Chunk:0
+ |Num_Threads:8Time elapsed:2.067617634 |Matrix Size:2000 |Schedule:static |Chunk:25
+ |Num_Threads:2Time elapsed:4.141132507 |Matrix Size:2000 |Schedule:static |Chunk:25
+ |Num_Threads:4Time elapsed:3.406025497 |Matrix Size:2000 |Schedule:static |Chunk:25
+ |Num_Threads:8Time elapsed:3.165993109 |Matrix Size:2000 |Schedule:dynamic |Chunk:25
+ |Num_Threads:2Time elapsed:3.819083056 |Matrix Size:2000 |Schedule:dynamic |Chunk:25
+ |Num_Threads:4Time elapsed:3.630932929 |Matrix Size:2000 |Schedule:dynamic |Chunk:25
+ |Num_Threads:8Time elapsed:2.965102009 |Matrix Size:2000 |Schedule:guided |Chunk:25
+ |Num_Threads:2Time elapsed:4.143555867 |Matrix Size:2000 |Schedule:guided |Chunk:25
+ |Num_Threads:4Time elapsed:3.122535656 |Matrix Size:2000 |Schedule:guided |Chunk:25
+ |Num_Threads:8

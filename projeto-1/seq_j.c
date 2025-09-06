@@ -66,11 +66,14 @@ void write_x_to_file(long double *x, int N) {
 void seq_process(long double **A, long double *b, int N) {
   long double *x[2];
   long long it = 0;
+  FILE *file;
+  const char *file_name = "time_related/sequential_time.dat";
+  file = fopen(file_name, "a");
 
-  if (!has_solution(A, N)) {
+  /*if (!has_solution(A, N)) {
     perror("A matriz de coeficientes não possui solução através do método de jacobi");
     exit(0);
-  }
+  }*/
 
   for (int i = 0; i < 2; i++) {
     x[i] = calloc(sizeof(long double), N);
@@ -95,8 +98,9 @@ void seq_process(long double **A, long double *b, int N) {
     it++;
   }
   while (stop_test(x[0], x[1], 10e-5, N));
-
-  print_arr(x[curr_x], N);
-
+  
+  //print_arr(x[curr_x], N);
   write_x_to_file(x[curr_x], N);
+  fprintf(file,"Num_Iter: %lld", it);
+  fclose(file);
 }

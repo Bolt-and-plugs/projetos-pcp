@@ -1,0 +1,12 @@
+./jacobi sistlinear2k.dat 2 static 0
+./jacobi sistlinear2k.dat 4 static 0
+./jacobi sistlinear2k.dat 8 static 0
+./jacobi sistlinear2k.dat 2 static 25
+./jacobi sistlinear2k.dat 4 static 25
+./jacobi sistlinear2k.dat 8 static 25
+./jacobi sistlinear2k.dat 2 dynamic 25
+./jacobi sistlinear2k.dat 4 dynamic 25
+./jacobi sistlinear2k.dat 8 dynamic 25
+./jacobi sistlinear2k.dat 2 guided 25
+./jacobi sistlinear2k.dat 4 guided 25
+./jacobi sistlinear2k.dat 8 guided 25

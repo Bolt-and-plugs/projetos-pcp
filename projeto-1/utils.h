@@ -9,8 +9,8 @@ void read_input(const char *path, long double **A, long double *b, const int n);
 
 bool write_file(const char *path, char *buffer);
 
-void measure_fn_time(void (fn)(long double **, long double *, int), long double **A, long double *b, int N);
-
+void measure_fn_time(void(fn)(long double **, long double *, int, int, char*, int), long double **A, long double *b,int N, int num_threads, char* schedule, int chunk);
+void measure_fn_seq_time(void(fn)(long double **, long double *, int), long double **A, long double *b,int N);
 bool stop_test(long double *x1, long double *x2, long double precision, int N);
 
 long double *arr_norm(long double *x1, long double *x2, int N);
