@@ -17,3 +17,8 @@ Additional arguments for parallel mode:
 --chunk_size       Chunk size for scheduling (optional)
 ```
 
+ou apenas execute o script bash
+
+```sh
+./test.sh
+```
