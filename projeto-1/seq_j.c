@@ -1,5 +1,6 @@
 #include "seq_j.h"
 #include "unistd.h"
+#include "math.h"
 
 long double **matrix_mul(long double **A, long double **B, int n) {
   long double **C = calloc(sizeof(long double *), n);
@@ -25,26 +26,11 @@ long double **matrix_mul(long double **A, long double **B, int n) {
 
 bool stop_test(long double *x1, long double *x2, long double precision, int N) {
   for (int i = 0; i < N; i++) {
-    long double result = x2[i] - x1[i] >= 0 ? x2[i] - x1[i] : (x2[i] - x1[i]) * -1;
-    if (result <= precision)
-      return false;
+    long double result = fabsl(x2[i] - x1[i]);
+    if (result > precision)
+      return true;
   }
-  return true;
-}
-
-bool has_solution(long double **A, int N)  {
-  // criterio da linha
-  long double sum = 0 ;
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < N; j++) {
-      if (i == j)
-        continue;
-      sum += A[i][j];
-    }
-    if (A[i][i] <= sum)
-      return false;
-  }
-  return true;
+  return false;
 }
 
 void write_x_to_file(long double *x, int N) {
@@ -63,23 +49,14 @@ void write_x_to_file(long double *x, int N) {
   fclose(fp);
 }
 
-void seq_process(long double **A, long double *b, int N) {
+long double *seq_process(long double **A, long double *b, int N) {
   long double *x[2];
   long long it = 0;
-  FILE *file;
-  const char *file_name = "time_related/sequential_time.dat";
-  file = fopen(file_name, "a");
-
-  /*if (!has_solution(A, N)) {
-    perror("A matriz de coeficientes não possui solução através do método de jacobi");
-    exit(0);
-  }*/
+  bool curr_x = false;
 
   for (int i = 0; i < 2; i++) {
     x[i] = calloc(sizeof(long double), N);
   }
-
-  int curr_x = 0;
 
   do {
     curr_x = !curr_x;
@@ -98,9 +75,7 @@ void seq_process(long double **A, long double *b, int N) {
     it++;
   }
   while (stop_test(x[0], x[1], 10e-5, N));
-  
-  //print_arr(x[curr_x], N);
-  write_x_to_file(x[curr_x], N);
-  fprintf(file,"Num_Iter: %lld", it);
-  fclose(file);
+
+  free(x[curr_x]);
+  return x[!curr_x];
 }

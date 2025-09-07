@@ -7,6 +7,6 @@
 
 long double **matrix_mul(long double **A, long double **B, int n);
 
-void seq_process(long double **A, long double *b, int N);
+long double *seq_process(long double **A, long double *b, int N);
 
 #endif
