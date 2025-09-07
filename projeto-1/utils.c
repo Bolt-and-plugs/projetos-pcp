@@ -75,8 +75,8 @@ void measure_fn_omp_time(long double*(fn)(long double **, long double *, int, in
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
   long double *result = fn(A, b, N, num_threads, schedule, chunk);
-  write_x_to_file(result, N, true);
   clock_gettime(CLOCK_MONOTONIC, &end);
+  write_x_to_file(result, N, true);
   sub_timespec(start, end, &_time);
   printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n", (int)_time.tv_sec, _time.tv_nsec, N);
   fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size:%d | Schedule:%s | Chunk:%d | Num_Threads:%d\n" , (int)_time.tv_sec, _time.tv_nsec, N, schedule, chunk, num_threads);
@@ -93,8 +93,8 @@ void measure_fn_seq_time(long double *(fn)(long double **, long double *, int), 
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
   long double *result = fn(A, b, N);
-  write_x_to_file(result, N, false);
   clock_gettime(CLOCK_MONOTONIC, &end);
+  write_x_to_file(result, N, false);
   sub_timespec(start, end, &_time);
   printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
   fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
