@@ -10,3 +10,18 @@ Time elapsed: 2.679551639 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num
 Time elapsed: 1.011987013 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:2
 Time elapsed: 2.103235303 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:4
 Time elapsed: 2.691800364 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:8
+---gutias---
+Time elapsed: 1.150296200 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:2
+Time elapsed: 2.616531100 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:4
+Time elapsed: 3.536745700 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:8
+Time elapsed: 1.127098100 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:2
+Time elapsed: 2.365878300 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:4
+Time elapsed: 2.664772500 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:8
+Time elapsed: 1.145353400 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:2
+Time elapsed: 2.104676900 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:4
+Time elapsed: 2.825359400 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:8
+Time elapsed: 1.095946400 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:2
+Time elapsed: 2.680211300 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:4
+Time elapsed: 3.119554700 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:8
+---luis desktop---
+
