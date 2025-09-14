@@ -1,3 +1,4 @@
+---gutias---
 Time elapsed: 1.014754586 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:2
 Time elapsed: 2.053304676 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:4
 Time elapsed: 2.672821683 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:8
@@ -10,7 +11,8 @@ Time elapsed: 2.679551639 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num
 Time elapsed: 1.011987013 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:2
 Time elapsed: 2.103235303 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:4
 Time elapsed: 2.691800364 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:8
----gutias---
+
+---luis desktop---
 Time elapsed: 1.150296200 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:2
 Time elapsed: 2.616531100 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:4
 Time elapsed: 3.536745700 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:8
@@ -23,5 +25,17 @@ Time elapsed: 2.825359400 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num
 Time elapsed: 1.095946400 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:2
 Time elapsed: 2.680211300 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:4
 Time elapsed: 3.119554700 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:8
----luis desktop---
 
+---brum---
+Time elapsed: 4.366061161 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:2
+Time elapsed: 8.703725713 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:4
+Time elapsed: 11.722825201 | Matrix Size:2000 | Schedule:static | Chunk:1 | Num_Threads:8
+Time elapsed: 2.994257008 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:2
+Time elapsed: 7.091187911 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:4
+Time elapsed: 10.924998954 | Matrix Size:2000 | Schedule:static | Chunk:25 | Num_Threads:8
+Time elapsed: 4.093027021 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:2
+Time elapsed: 8.746934935 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:4
+Time elapsed: 11.404252367 | Matrix Size:2000 | Schedule:dynamic | Chunk:25 | Num_Threads:8
+Time elapsed: 4.002509934 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:2
+Time elapsed: 9.143917483 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:4
+Time elapsed: 13.207461253 | Matrix Size:2000 | Schedule:guided | Chunk:25 | Num_Threads:8
