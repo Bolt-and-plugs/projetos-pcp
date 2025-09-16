@@ -1,0 +1,209 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{authblk}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{indentfirst}
+\begin{document}
+\begin{titlepage}
+	\begin{center}
+	
+	\vspace{115pt}
+    \textbf{\Huge{Projeto Programação Concorrente e Paralela}}\\
+        
+	\vspace{115pt}
+    Carlos Eduardo Nogueira Silva \\
+    Felipe Gomes da Silva \\
+    Gabriel Martins Brum \\
+    Luis Henrique Salomão Lobato \\
+	\end{center}
+	
+	\vspace{1cm}
+	\begin{center}
+		\vspace{\fill}
+    \large{Setembro, 2025} 
+	\end{center}
+\end{titlepage}
+\date{September 2025}
+
+
+
+
+\section{Introdução}
+
+Sistemas  de equações lineares (\textit{Ax=b} podem ser resolvidos de diferentes formas, sendo que um dos possíveis métodos de convergência para identificar soluções é o método de Jacobi, uma abordagem de iterações. 
+
+Neste trabalho foram medidos os tempos de execução a partir da implementação do método de Jacobi tanto sequencial, quanto em paralelo através do uso da ferramenta openMP. 
+
+\section{Metodologia}
+\subsection{Cálculo}
+O método iterativo de Jacobi foi representado algebricamente através da composição de uma matriz diagonal e as matrizes superiores e inferiores da matriz A. Através desta definição, podê-se chegar em uma solução para um sistema linear através da aplicação da equação \ref{eq:jacobi}. 
+
+O critério de parada adotado foi o de que diferença máxima entre $X_{i}^{k+1}$ e $X_{i}^{k}$ fosse de $10^{-5}$.
+
+\begin{equation}
+\label{eq:jacobi}
+    x_{i}^{k+1} = \frac{1}{a_{ii}}\left(b_i - \sum_{j \neq i} a_{ij}x_{j}^{k}\right)
+\end{equation}
+
+\subsection{Testes}
+
+
+Foram testadas tanto a implementação sequencial do método, quanto como a execução paralela do algoritmo, com diferentes parâmetros de ajuste. 
+
+O contexto de aplicação dos testes respeitou matrizes A com dimensões de 2000 x 2000 e por consequência, vetores b com 2000 constantes, de modo que os valores utilizados foram de números reais de até 4 casas decimais, respeitando o intervalo de -500 a 500. 
+
+Os parâmetros avaliados ao longo dos testes com a versão openMP foram o número de threads de execução variando de 2 a 8, o tipo de escalonador de threads (\textit{static}, \textit{guided} e \textit{dynamic})  e o número de \textit{chunks} (0 ou 25).  
+
+Os testes foram executados em diferentes máquinas com diferentes processadores, visando evitar qualquer tipo de viés na análise de desempenho dos métodos e aumentar o contexto de exploração proposto. 
+
+
+\section{Resultados}
+Na Tabela \ref{tab:processor_specs} estão detalhados os processadores utilizados para a executar dos programas sequencial e openMP, seguido pelo número de núcleos e \textit{threads} dos mesmos.
+
+
+\begin{table}[h]
+    \centering
+    \caption{Especificações dos processadores onde os algoritmos foram testados.}
+    \label{tab:processor_specs}
+    \begin{tabular}{ccc}
+    \toprule
+    \textbf{Processador} & \textbf{Núcleos} & \textbf{Threads} \\
+    \midrule
+    Intel Core i3-10100F & 4 & 8 \\
+    Intel Core i7-10750H & 6 & 12 \\
+    AMD Ryzen 7 5700u & 8 & 16 \\
+    AMD Ryzen 5 3500u & 4 & 8 \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+Assim, encontram-se nas Tabelas  \ref{tab:results}, \ref{tab:results2}, \ref{tab:results3} e \ref{tab:results4} os resultados das medições do tempo de execução dos algoritmos em cada processador. 
+
+\begin{table}[H]
+    \caption{Resultados da execução dos testes em um i3-10100F.}
+    \centering
+    \label{tab:results}
+    \begin{tabular}{cccc}
+    \toprule
+    \textbf{Threads} & \textbf{Schedule} & \textbf{Chunk} & \textbf{Tempo de Execução} \\
+    \midrule
+    1 (sequencial) & N/A & N/A & 0.1024s\\
+    \addlinespace
+    2 & Estático & N/A & 1.1503s \\
+    4 & Estático & N/A & 2.6165s \\
+    8 & Estático & N/A & 3.5367s \\
+    \addlinespace
+    2 & Estático & 25 &  1.1271s\\
+    4 & Estático & 25 & 2.3659s\\
+    8 & Estático & 25 &  2.6648s\\
+    \addlinespace
+    2 & Dinâmico & 25 &  1.1453s\\
+    4 & Dinâmico & 25 & 2.1047s\\
+    8 & Dinâmico & 25 &  2.8254s\\
+    \addlinespace
+    2 & Guided & 25 &  1.0959s\\
+    4 & Guided & 25 &  2.6802s\\
+    8 & Guided & 25 &  3.1195s\\
+    
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \caption{Resultados da execução dos testes em um i7-10750H.}
+    \centering
+    \label{tab:results3}
+    \begin{tabular}{cccc}
+    \toprule
+    \textbf{Threads} & \textbf{Schedule} & \textbf{Chunk} & \textbf{Tempo de Execução} \\
+    \midrule
+    1 (sequencial) & N/A & N/A & 0.4097s \\
+    \addlinespace
+    2 & static & 1 & 4.3661s \\
+    4 & static & 1 & 8.7037s \\
+    8 & static & 1 & 11.7228s \\
+    \addlinespace
+    2 & static & 25 & 2.9943s \\
+    4 & static & 25 & 7.0912s \\
+    8 & static & 25 & 10.9250s \\
+    \addlinespace
+    2 & dynamic & 25 & 4.0930s \\
+    4 & dynamic & 25 & 8.7469s \\
+    8 & dynamic & 25 & 11.4043s \\
+    \addlinespace
+    2 & guided & 25 & 4.0025s \\
+    4 & guided & 25 & 9.1439s \\
+    8 & guided & 25 & 13.2075s \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+
+\begin{table}[H]
+    \caption{Resultados da execução dos testes em um AMD Ryzen 7 5700u.}
+    \centering
+    \label{tab:results2}
+    \begin{tabular}{cccc}
+    \toprule
+    \textbf{Threads} & \textbf{Schedule} & \textbf{Chunk} & \textbf{Tempo de Execução} \\
+    \midrule
+    1 (sequencial) & N/A & N/A & 0.1277s\\
+    \addlinespace
+    2 & Estático & 1 & 1.0148s \\
+    4 & Estático & 1 & 2.0533s \\
+    8 & Estático & 1 & 2.6728s \\
+    \addlinespace
+    2 & Estático & 25 & 1.0125s\\
+    4 & Estático & 25 & 2.2540s\\
+    8 & Estático & 25 & 2.6751s\\
+    \addlinespace
+    2 & Dinâmico & 25 & 1.0092s\\
+    4 & Dinâmico & 25 & 2.0855s\\
+    8 & Dinâmico & 25 & 2.6796s\\
+    \addlinespace
+    2 & Guided & 25 & 1.0120s\\
+    4 & Guided & 25 & 2.1032s\\
+    8 & Guided & 25 & 2.6918s\\
+    
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+
+\begin{table}[H]
+\caption{Resultados da execução dos testes em um AMD Ryzen 5 3500u.}
+ \centering
+ \label{tab:results4}
+ \begin{tabular}{cccc}
+ \toprule
+ \textbf{Threads} & \textbf{Schedule} & \textbf{Chunk} & \textbf{Tempo de Execução} \\
+ \midrule
+ 1 (sequencial) & N/A & N/A & 0.1515s\\
+ \addlinespace
+ 2 & static & 1 & 1.0952s \\
+ 4 & static & 1 & 2.7601s \\
+ 8 & static & 1 & 4.3522s \\
+ \addlinespace
+ 2 & static & 25 & 1.0758s\\
+ 4 & static & 25 & 2.7876s\\
+ 8 & static & 25 & 4.4914s\\
+\addlinespace
+ 2 & dynamic & 25 & 1.0862s\\
+4 & dynamic & 25 & 2.8168s\\
+ 8 & dynamic & 25 & 4.2930s\\
+ \addlinespace
+ 2 & guided & 25 & 1.4712s\\
+ 4 & guided & 25 & 2.5914s\\
+ 8 & guided & 25 & 3.8268s\\
+ \bottomrule
+ \end{tabular}
+\end{table}
+
+
+\section{Conclusão}
+
+A partir dos dados coletados, foi possível concluir que para este caso específico de testes, onde o método de Jacobi acabou por convergir em poucas iterações (neste caso, 7), a implementação sequencial obteve vantagem de forma majoritária, pois o programa openMP acaba por consumir mais tempo para a criação, alocação e escalonamento de threads do que executando em si o cálculo do método. 
+\end{document}
