@@ -1,5 +1,4 @@
 #include "seq_j.h"
-#include "unistd.h"
 #include "math.h"
 
 long double **matrix_mul(long double **A, long double **B, int n) {

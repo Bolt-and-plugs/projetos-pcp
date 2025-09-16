@@ -1,6 +1,6 @@
-#include "omp_j.h"
-#include "seq_j.h"
-#include "utils.h"
+#include "src/omp_j.h"
+#include "src/seq_j.h"
+#include "src/utils.h"
 #include <string.h>
 
 int execute_seq_test(char *dir) {
