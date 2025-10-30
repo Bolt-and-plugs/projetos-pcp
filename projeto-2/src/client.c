@@ -7,6 +7,7 @@ int main(int argc, char **argv) {
   struct sockaddr_in server_addr;
 
   host = gethostbyname(argv[1]);
+  printf("%d", host->h_addrtype);
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Erro na criação do Socket");
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
   // Repete enquanto a conexão for mantida
-  while(1) { // Lê entrada do usuário
+  while(true) { // Lê entrada do usuário
     printf ("\n TEXTO (q or Q to quit) : ");
     fgets(send_data, sizeof(send_data), stdin);
     // Envia texto ou pedido de desconexão ao servidor
@@ -37,8 +38,8 @@ int main(int argc, char **argv) {
     // Imprime a resposta ou fecha o socket se havia pedido
     if (strcmp(recv_data,"Encerrando conexao\n")!=0)
       printf("\n DADO RECEBIDO = %s " , recv_data);
-    else
-    { printf("\n %s " , recv_data);
+    else {
+      printf("\n %s " , recv_data);
       close(sock);
       break;
     }
