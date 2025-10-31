@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     // Imprime a resposta ou fecha o socket se havia pedido
     if (strcmp(recv_data,"q\n")!=0 || strcmp(recv_data,"Q\n")!=0) {
       printf("\n DADO RECEBIDO = %s " , recv_data);
+      // TODO processar fatia da imagem recebida
     }
     else {
       printf("\n %s " , recv_data);

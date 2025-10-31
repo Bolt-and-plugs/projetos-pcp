@@ -21,12 +21,14 @@ void *get_connection(void *args) {
       printf("Cliente %d: %s\n", idx, recv_data);
       sprintf(send_data, "Servidor recebeu: %s\n", recv_data);
       memset(recv_data, 0, BUFF_SIZE);
-      // enviar parte do vetor agora
-      if (true) {
-        send(fd, send_data, BUFF_SIZE, 0);
-      } else {
-
-      }
+      // TODO enviar fatia da imagem aqui
+      send(fd, send_data, BUFF_SIZE, 0);
+      // recebe a mesma seção processada
+      bytes_recv = recv(fd ,recv_data, BUFF_SIZE, 0);
+      recv_data[bytes_recv] = '\0';
+      // escreve a seção de volta na imagem
+      printf("Cliente %d processou: %s\n", idx, recv_data);
+      memset(recv_data, 0, BUFF_SIZE);
     }
   }
 
@@ -118,7 +120,7 @@ int main(int argc, char **argv) {
     sem_post(&s.mutex);
     
     pthread_create(&s.cli_t[s.curr], NULL, get_connection, (void*)ta);
-    pthread_detach(s.cli_t[s.curr]);    
+    pthread_detach(s.cli_t[s.curr]);
   }
 
   close(sock);
