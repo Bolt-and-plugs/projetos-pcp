@@ -36,8 +36,9 @@ int main(int argc, char **argv) {
     bytes_recv=recv(sock,recv_data,1024,0);
     recv_data[bytes_recv] = '\0';
     // Imprime a resposta ou fecha o socket se havia pedido
-    if (strcmp(recv_data,"Encerrando conexao\n")!=0)
+    if (strcmp(recv_data,"q\n")!=0 || strcmp(recv_data,"Q\n")!=0) {
       printf("\n DADO RECEBIDO = %s " , recv_data);
+    }
     else {
       printf("\n %s " , recv_data);
       close(sock);

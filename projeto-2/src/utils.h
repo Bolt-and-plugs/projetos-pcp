@@ -6,7 +6,7 @@
 #include "stdlib.h"
 
 // parse N "long double's" from path to A
-void read_input(const char *path, long double **A, const int n);
+void read_input(const char *path, int **A, const int n);
 
 bool write_file(const char *path, char *buffer);
 

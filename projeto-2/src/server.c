@@ -2,18 +2,19 @@
 
 
 server s;
+int **image;
 
 void *get_connection(void *args) {
   thread_args *args_ptr = (thread_args*)args;
   int idx = args_ptr->idx, fd = args_ptr->fd;
+  int bytes_recv;
   free(args_ptr);
-
-  printf("id: %d\n", idx);
 
   char send_data[BUFF_SIZE] , recv_data[BUFF_SIZE];
   while (true) {
-    recv(fd ,recv_data, BUFF_SIZE, 0);
-    if (recv_data[0] == 'q' || recv_data[0] == 'Q') {
+    bytes_recv=recv(fd ,recv_data, BUFF_SIZE, 0);
+    recv_data[bytes_recv] = '\0';
+    if (strcmp(recv_data,"q\n")==0 || strcmp(recv_data,"Q\n")==0) {
       break;
     }
     else if (recv_data[0] != '\0') {
@@ -21,6 +22,11 @@ void *get_connection(void *args) {
       sprintf(send_data, "Servidor recebeu: %s\n", recv_data);
       memset(recv_data, 0, BUFF_SIZE);
       // enviar parte do vetor agora
+      if (true) {
+        send(fd, send_data, BUFF_SIZE, 0);
+      } else {
+
+      }
     }
   }
 
@@ -33,9 +39,30 @@ int main(int argc, char **argv) {
   unsigned int sin_size;
   s.curr = 0;
   s.tail = CLI_NUM - 1;
-
-
   sem_init(&s.mutex, 0, 1);
+
+  char file_path[BUFF_SIZE];
+  if (argv[1]) {
+    strcpy(file_path, argv[1]);
+  }
+
+  image = malloc(sizeof(int) * IMAGE_SIZE);
+  if (!image) {
+    perror("Could not allocate image buffer");
+    free(image);
+    exit(1);
+  }
+  for (int i = 0; i < IMAGE_SIZE; i++) {
+      image[i] = malloc(sizeof(int) * IMAGE_SIZE);
+    if (!image[i]) {
+      perror("Could not allocate image buffer");
+      for (int j = 0; j <= i; j++)
+        free(image[i]);
+      exit(1);
+    }
+  }
+
+  read_input(file_path, image, IMAGE_SIZE);
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Erro na criação do Socket");
@@ -81,7 +108,6 @@ int main(int argc, char **argv) {
     ta->idx = s.curr;
     ta ->fd = connected;
 
-
     sem_wait(&s.mutex);
     if (s.tail == s.curr)
       s.curr = s.curr + 1 % CLI_NUM;
@@ -94,6 +120,7 @@ int main(int argc, char **argv) {
     pthread_create(&s.cli_t[s.curr], NULL, get_connection, (void*)ta);
     pthread_detach(s.cli_t[s.curr]);    
   }
+
   close(sock);
   return 0;
 }

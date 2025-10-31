@@ -4,6 +4,7 @@
 #include "defines.h"
 #include "pthread.h"
 #include "semaphore.h"
+#include "utils.h"
 
 
 #define SERVER_PORT 5000

@@ -2,7 +2,7 @@
 #include "math.h"
 #include "time.h"
 
-void read_input(const char *path, long double **A, const int n) {
+void read_input(const char *path, int **A, const int n) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
   int i = 0, j = 0;
@@ -15,7 +15,7 @@ void read_input(const char *path, long double **A, const int n) {
 
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      if (fscanf(fp, "%Lf", &A[i][j]) != 1) {
+      if (fscanf(fp, "%d", &A[i][j]) != 1) {
         fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
         fclose(fp);
         exit(EXIT_FAILURE);
