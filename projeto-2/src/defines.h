@@ -1,7 +1,7 @@
 #ifndef _DEFINES 
 #define _DEFINES 
 
-#define N 20
+#define CLI_NUM 20
 #define BUFF_SIZE 1024
 
 #include <stdio.h>

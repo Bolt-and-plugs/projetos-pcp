@@ -1,11 +1,14 @@
 #include "server.h"
-#include <stdio.h>
 
 
-void *connection(void *args) {
-  int idx, fd;
-  sscanf("%d\n%d", (char*)args, &idx, &fd);
-  printf("id: %d", idx);
+server s;
+
+void *get_connection(void *args) {
+  thread_args *args_ptr = (thread_args*)args;
+  int idx = args_ptr->idx, fd = args_ptr->fd;
+  free(args_ptr);
+
+  printf("id: %d\n", idx);
 
   char send_data[BUFF_SIZE] , recv_data[BUFF_SIZE];
   while (true) {
@@ -14,27 +17,25 @@ void *connection(void *args) {
       break;
     }
     else if (recv_data[0] != '\0') {
-      printf("Cliente %d: %s", idx, recv_data);
-      sprintf(send_data, "Servidor recebeu: %s", recv_data);
+      printf("Cliente %d: %s\n", idx, recv_data);
+      sprintf(send_data, "Servidor recebeu: %s\n", recv_data);
       memset(recv_data, 0, BUFF_SIZE);
+      // enviar parte do vetor agora
     }
   }
 
-  return (void*)idx;
+  s.curr = idx; 
+  return args;
 }
 
 int main(int argc, char **argv) {
-  int sock, connected, t = 1, last_cli = 0, tail = N - 1; 
-  // this tail and last_cli simply does not work right, I did not put any effort into it. Just ignore those
+  int sock, connected, t = 1;
   unsigned int sin_size;
-  struct sockaddr_in server_addr, client_addr[N];
-  pthread_t cli_t[N];
-  sem_t mutex, waiters;
+  s.curr = 0;
+  s.tail = CLI_NUM - 1;
 
 
-  sem_init(&mutex, 0, 1);
-  // client connection waiters
-  sem_init(&waiters, 0, N);
+  sem_init(&s.mutex, 0, 1);
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Erro na criação do Socket");
@@ -42,22 +43,22 @@ int main(int argc, char **argv) {
   }
 
   if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &t, sizeof(int))
-    == -1)
-  { perror("Erro em Setsockopt");
-    exit(1);
-  }
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(5000); // host-endian to network-endian
-  server_addr.sin_addr.s_addr = INADDR_ANY;
-
-
-  if (bind(sock, (struct sockaddr *)&server_addr, sizeof(struct
-           sockaddr)) == -1) {
-    perror("binding não foi possível");
+    == -1) {
+    perror("Erro em Setsockopt");
     exit(1);
   }
 
-  if (listen(sock, N) == -1) {
+  s.server_addr.sin_family = AF_INET;
+  s.server_addr.sin_port = htons(SERVER_PORT); // host-endian to network-endian
+  s.server_addr.sin_addr.s_addr = INADDR_ANY;
+
+
+  if (bind(sock, (struct sockaddr *)&s.server_addr, sizeof(struct sockaddr)) == -1) {
+    perror("Binding não foi possível");
+    exit(1);
+  }
+
+  if (listen(sock, CLI_NUM) == -1) {
     perror("Erro na definição do tamanho da fila de entrada");
     exit(1);
   }
@@ -69,35 +70,29 @@ int main(int argc, char **argv) {
   // loop do servidor
   while (true) {
     sin_size = sizeof(struct sockaddr_in);
-    connected = accept(sock, (struct sockaddr *)&client_addr, &sin_size);
+    connected = accept(sock, (struct sockaddr *)&s.client_addr[s.curr], &sin_size);
 
     printf("\nConexão recebida (Cliente: %s , Porta: %d)\n",
-           inet_ntoa(client_addr[last_cli].sin_addr), ntohs(client_addr[last_cli].sin_port));
-    fflush(stdout);
+           inet_ntoa(s.client_addr[s.curr].sin_addr), ntohs(s.client_addr[s.curr].sin_port));
   
     // pass idx and addr for each thread
-    char args[BUFF_SIZE];
-    sem_wait(&waiters);
-    sprintf(args, "%d\n%d", last_cli, client_addr[last_cli].sin_addr.s_addr);
+    thread_args *ta;
+    ta = malloc(sizeof(thread_args));
+    ta->idx = s.curr;
+    ta ->fd = connected;
 
-    pthread_create(&cli_t[last_cli], NULL, connection, (void*)args);
-    pthread_join(cli_t[last_cli], (void*)&last_cli);
 
-    if (client_addr[last_cli + 1].sin_addr.s_addr == 0){
-      sem_wait(&mutex);
-      if (last_cli == tail)
-        last_cli = 0;
-      else
-        last_cli++;
-      sem_post(&mutex);
-    }
-    else {
-      sem_wait(&mutex);
-      last_cli = tail;
-      sem_post(&mutex);
-    }
-    sem_post(&waiters);
-    printf("%d", last_cli);
+    sem_wait(&s.mutex);
+    if (s.tail == s.curr)
+      s.curr = s.curr + 1 % CLI_NUM;
+    else 
+      s.curr = s.tail + 1 % CLI_NUM;
+
+    s.tail = s.tail + 1 % CLI_NUM;
+    sem_post(&s.mutex);
+    
+    pthread_create(&s.cli_t[s.curr], NULL, get_connection, (void*)ta);
+    pthread_detach(s.cli_t[s.curr]);    
   }
   close(sock);
   return 0;
