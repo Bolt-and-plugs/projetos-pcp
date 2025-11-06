@@ -65,12 +65,12 @@ void measure_fn_time(long double *(fn)(long double **, long double *, int), long
   file = fopen(file_name, "a");
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(N, W, H);
+  long double *result = fn(0, 0, 0);
   clock_gettime(CLOCK_MONOTONIC, &end);
   //write_x_to_file(result, N, false); no need anymore.
   sub_timespec(start, end, &_time);
   printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, W, H);
+  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, 0, 0);
   fclose(file);
 }
 

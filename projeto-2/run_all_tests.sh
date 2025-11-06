@@ -4,7 +4,7 @@
 
 # --- Configurações ---
 HOSTNAME="localhost"
-IMAGE_FILE="imagem.txt"     # Coloque o nome do seu arquivo de imagem de entrada [cite: 13]
+IMAGE_FILE="assets/imagem.txt"     # Coloque o nome do seu arquivo de imagem de entrada [cite: 13]
 SERVER_EXEC="./server"
 CLIENT_EXEC="./client"
 NUM_EXECUCOES=3             # Média de 3 execuções por teste 

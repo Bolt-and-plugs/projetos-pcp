@@ -12,7 +12,7 @@ void *get_connection(void *args) {
   int bytes_recv;
   free(args_ptr);
 
-  char send_data[sizeof(int)*x*y] , recv_data[sizeof(int)*x*y];
+  char send_data[sizeof(int) * x * y] , recv_data[sizeof(int) * x * y];
   while (true) {
     bytes_recv=recv(fd ,recv_data, x*y, 0);
     recv_data[bytes_recv] = '\0';
@@ -26,6 +26,7 @@ void *get_connection(void *args) {
       
       int x_ur = slice_queue->queue_x[slice_queue->tail+1];
       int y_ur = slice_queue->queue_y[slice_queue->tail+1];
+      dequeue(slice_queue);
       memcpy(send_data, &image[x_ur][y_ur], x*y);
       send(fd, send_data, x*y, 0);
 
@@ -46,10 +47,11 @@ int main(int argc, char **argv) {
   int sock, connected, t = 1;
   unsigned int sin_size;
   s.curr = 0;
-  s.tail = CLI_NUM - 1;
+  s.tail = atoi(argv[2]) - 1;
   sem_init(&s.mutex, 0, 1);
-  x = atoi(argv[2]);
-  y = atoi(argv[3]);
+
+  x = atoi(argv[3]);
+  y = atoi(argv[4]);
 
   slice_queue = (queue*) malloc(sizeof(queue));
   init_queue(slice_queue);
