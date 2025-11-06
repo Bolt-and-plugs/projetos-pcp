@@ -57,7 +57,6 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-
 void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
                      int N) {
   FILE *file;
@@ -99,4 +98,19 @@ void print_mat(long double **x, int N, int M) {
     }
     puts("");
   }
+}
+
+void init_queue(queue* q){
+  q->head = 1;
+  q->tail = 0;
+}
+
+void enqueue(queue *q, int x, int y){
+  q->queue_x[q->tail] = x;
+  q->queue_y[q->tail] = y;
+  q->tail++;
+}
+
+void dequeue(queue *q){
+  q->head++;
 }

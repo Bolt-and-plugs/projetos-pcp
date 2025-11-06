@@ -1,8 +1,10 @@
 #include "server.h"
-
+#include <stdlib.h>
 
 server s;
 int **image;
+int x, y;
+queue* slice_queue;
 
 void *get_connection(void *args) {
   thread_args *args_ptr = (thread_args*)args;
@@ -10,9 +12,9 @@ void *get_connection(void *args) {
   int bytes_recv;
   free(args_ptr);
 
-  char send_data[BUFF_SIZE] , recv_data[BUFF_SIZE];
+  char send_data[sizeof(int)*x*y] , recv_data[sizeof(int)*x*y];
   while (true) {
-    bytes_recv=recv(fd ,recv_data, BUFF_SIZE, 0);
+    bytes_recv=recv(fd ,recv_data, x*y, 0);
     recv_data[bytes_recv] = '\0';
     if (strcmp(recv_data,"q\n")==0 || strcmp(recv_data,"Q\n")==0) {
       break;
@@ -20,15 +22,19 @@ void *get_connection(void *args) {
     else if (recv_data[0] != '\0') {
       printf("Cliente %d: %s\n", idx, recv_data);
       sprintf(send_data, "Servidor recebeu: %s\n", recv_data);
-      memset(recv_data, 0, BUFF_SIZE);
-      // TODO enviar fatia da imagem aqui
-      send(fd, send_data, BUFF_SIZE, 0);
+      memset(recv_data, 0, x*y); 
+      
+      int x_ur = slice_queue->queue_x[slice_queue->tail+1];
+      int y_ur = slice_queue->queue_y[slice_queue->tail+1];
+      memcpy(send_data, &image[x_ur][y_ur], x*y);
+      send(fd, send_data, x*y, 0);
+
       // recebe a mesma seção processada
-      bytes_recv = recv(fd ,recv_data, BUFF_SIZE, 0);
+      bytes_recv = recv(fd ,recv_data, x*y, 0);
       recv_data[bytes_recv] = '\0';
       // escreve a seção de volta na imagem
       printf("Cliente %d processou: %s\n", idx, recv_data);
-      memset(recv_data, 0, BUFF_SIZE);
+      memset(recv_data, 0, x*y);
     }
   }
 
@@ -42,6 +48,11 @@ int main(int argc, char **argv) {
   s.curr = 0;
   s.tail = CLI_NUM - 1;
   sem_init(&s.mutex, 0, 1);
+  x = atoi(argv[2]);
+  y = atoi(argv[3]);
+
+  slice_queue = (queue*) malloc(sizeof(queue));
+  init_queue(slice_queue);
 
   char file_path[BUFF_SIZE];
   if (argv[1]) {
@@ -65,6 +76,10 @@ int main(int argc, char **argv) {
   }
 
   read_input(file_path, image, IMAGE_SIZE);
+
+  for(int i = 0; i < (IMAGE_SIZE/x); i++)
+    for(int j = 0; j < (IMAGE_SIZE/y); i++)
+      enqueue(slice_queue, i*x, j*y);
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Erro na criação do Socket");
@@ -96,8 +111,10 @@ int main(int argc, char **argv) {
   printf("\nServidor TCP esperando por cliente na porta 5000\n");
   fflush(stdout);
 
+
   // loop do servidor
   while (true) {
+
     sin_size = sizeof(struct sockaddr_in);
     connected = accept(sock, (struct sockaddr *)&s.client_addr[s.curr], &sin_size);
 
