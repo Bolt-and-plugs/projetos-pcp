@@ -142,6 +142,7 @@ int main(int argc, char **argv) {
     pthread_detach(s.cli_t[s.curr]);
   }
 
+  // so chamar o write_file 
   close(sock);
   return 0;
 }

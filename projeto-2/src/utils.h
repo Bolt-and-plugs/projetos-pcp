@@ -8,7 +8,7 @@
 // parse N "long double's" from path to A
 void read_input(const char *path, int **A, const int n);
 
-bool write_file(const char *path, char *buffer);
+bool write_file(const char *path, int **buffer, const int n);
 
 void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,int N);
 bool stop_test(long double *x1, long double *x2, long double precision, int N);

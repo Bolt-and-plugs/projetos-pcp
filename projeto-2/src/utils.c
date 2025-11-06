@@ -24,6 +24,32 @@ void read_input(const char *path, int **A, const int n) {
   }
 }
 
+bool write_file(const char *path, int **buffer, const int n) {
+  FILE *fp = fopen(path, "w");
+  if (fp == NULL) {
+    perror("Error opening file for writing");
+    return false;
+  }
+
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      if(fprintf(fp, "%d ", buffer[i][j]) < 0) {
+        perror("Error writing to file");
+        fclose(fp);
+        return false;
+      }
+    }
+    if (fprintf(fp, "\n") < 0) {
+      perror("Error writing to file");
+      fclose(fp);
+      return false;
+    }
+  }
+  fclose(fp);
+
+  return true;
+}
+
 enum { NS_PER_SECOND = 1000000000 };
 
 void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
@@ -55,32 +81,6 @@ static void write_x_to_file(long double *x, int N, bool omp) {
     fprintf(fp, "[%.4Lf]\t", x[i]);
 
   fclose(fp);
-}
-
-void measure_fn_time(long double *(fn)(int, int, int), int N, int W, int H) { 
-  
-  /* 
-    _NOT FINISHED YET, IT DEPENDS ON "SENDING" AND "RECEIVING" IMPLEMENTATION
-    - fn is the function
-    - N is the number os blocks that are being transmitted
-    - W is the width of the block
-    - H is the height of the block
-    - W x H compose block's dimension
-  */
-
-  FILE *file;
-  puts("Initializing sequential execution");
-  const char *file_name = "time_related/times.dat";
-  file = fopen(file_name, "a");
-  struct timespec start, end, _time;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(N, W, H);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  //write_x_to_file(result, N, false); no need anymore.
-  sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, W, H);
-  fclose(file);
 }
 
 
