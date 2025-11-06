@@ -19,4 +19,16 @@ void print_arr(long double *x, int N);
 
 void print_mat(long double **x, int N, int M);
 
+typedef struct {
+    int queue_x[8];
+    int queue_y[8];
+    int head;
+    int tail;
+} queue;
+
+void init_queue(queue* q);
+void enqueue(queue *q, int x, int y);
+void dequeue(queue *q);
+
+
 #endif

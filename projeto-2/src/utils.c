@@ -57,18 +57,8 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-
-void measure_fn_time(long double *(fn)(int, int, int), int N, int W, int H) { 
-  
-  /* 
-    _NOT FINISHED YET, IT DEPENDS ON "SENDING" AND "RECEIVING" IMPLEMENTATION
-    - fn is the function
-    - N is the number os blocks that are being transmitted
-    - W is the width of the block
-    - H is the height of the block
-    - W x H compose block's dimension
-  */
-
+void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
+                     int N) {
   FILE *file;
   puts("Initializing sequential execution");
   const char *file_name = "time_related/times.dat";
@@ -108,4 +98,19 @@ void print_mat(long double **x, int N, int M) {
     }
     puts("");
   }
+}
+
+void init_queue(queue* q){
+  q->head = 1;
+  q->tail = 0;
+}
+
+void enqueue(queue *q, int x, int y){
+  q->queue_x[q->tail] = x;
+  q->queue_y[q->tail] = y;
+  q->tail++;
+}
+
+void dequeue(queue *q){
+  q->head++;
 }
