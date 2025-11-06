@@ -2,28 +2,6 @@
 #include "math.h"
 #include "time.h"
 
-void read_input(const char *path, int **A, const int n) {
-  FILE *fp = fopen(path, "r");
-  bool ex = false;
-  int i = 0, j = 0;
-
-  if (fp == NULL) {
-    perror("Error opening file");
-    
-    exit(EXIT_FAILURE);
-  }
-
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
-      if (fscanf(fp, "%d", &A[i][j]) != 1) {
-        fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
-        fclose(fp);
-        exit(EXIT_FAILURE);
-      }
-    }
-  }
-}
-
 enum { NS_PER_SECOND = 1000000000 };
 
 void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
@@ -57,20 +35,39 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
-                     int N) {
+void measure_fn_omp_time(long double*(fn)(long double **, long double *, int, int, char*, int), long double **A, long double *b,
+                     int N, int num_threads, char* schedule, int chunk) {
   FILE *file;
-  puts("Initializing sequential execution");
-  const char *file_name = "time_related/times.dat";
+  const char *file_name = "time_related/parallel_time.dat";
+  puts("Initializing parallel execution");
+
   file = fopen(file_name, "a");
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(N, W, H);
+  long double *result = fn(A, b, N, num_threads, schedule, chunk);
   clock_gettime(CLOCK_MONOTONIC, &end);
-  //write_x_to_file(result, N, false); no need anymore.
+  write_x_to_file(result, N, true);
+  sub_timespec(start, end, &_time);
+  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n", (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size:%d | Schedule:%s | Chunk:%d | Num_Threads:%d\n" , (int)_time.tv_sec, _time.tv_nsec, N, schedule, chunk, num_threads);
+  fclose(file);
+
+}
+
+void measure_fn_seq_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
+                     int N) {
+  FILE *file;
+  puts("Initializing sequential execution");
+  const char *file_name = "time_related/sequential_time.dat";
+  file = fopen(file_name, "a");
+  struct timespec start, end, _time;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  long double *result = fn(A, b, N);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  write_x_to_file(result, N, false);
   sub_timespec(start, end, &_time);
   printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, W, H);
+  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
   fclose(file);
 }
 
@@ -98,19 +95,4 @@ void print_mat(long double **x, int N, int M) {
     }
     puts("");
   }
-}
-
-void init_queue(queue* q){
-  q->head = 1;
-  q->tail = 0;
-}
-
-void enqueue(queue *q, int x, int y){
-  q->queue_x[q->tail] = x;
-  q->queue_y[q->tail] = y;
-  q->tail++;
-}
-
-void dequeue(queue *q){
-  q->head++;
 }
