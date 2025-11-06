@@ -57,20 +57,29 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
-                     int N) {
+void measure_fn_time(long double *(fn)(int, int, int), int N, int W, int H) { 
+  
+  /* 
+    _NOT FINISHED YET, IT DEPENDS ON "SENDING" AND "RECEIVING" IMPLEMENTATION
+    - fn is the function
+    - N is the number os blocks that are being transmitted
+    - W is the width of the block
+    - H is the height of the block
+    - W x H compose block's dimension
+  */
+
   FILE *file;
   puts("Initializing sequential execution");
   const char *file_name = "time_related/times.dat";
   file = fopen(file_name, "a");
   struct timespec start, end, _time;
   clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(0, 0, 0);
+  long double *result = fn(N, W, H);
   clock_gettime(CLOCK_MONOTONIC, &end);
   //write_x_to_file(result, N, false); no need anymore.
   sub_timespec(start, end, &_time);
   printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, 0, 0);
+  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, W, H);
   fclose(file);
 }
 
