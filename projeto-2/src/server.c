@@ -108,6 +108,7 @@ int main(int argc, char **argv) {
 
   width = atoi(argv[3]);  // Width
   height = atoi(argv[4]); // Height
+  int block_size = atoi(argv[5]), num_blocks = 0;
 
   slice_queue = (queue *)malloc(sizeof(queue));
   init_queue(slice_queue);
@@ -118,9 +119,13 @@ int main(int argc, char **argv) {
 
   init_image();
   read_input(file_path, image, IMAGE_SIZE);
-  for (int i = 0; i < (IMAGE_SIZE / width); i++)
-    for (int j = 0; j < (IMAGE_SIZE / height); j++)
-      enqueue(slice_queue, i * width, j * height);
+  int num_chunks = (width * height) / block_size;
+  for (int i = 0; i < width / block_size; i++) {
+    for (int j = 0; j < height / block_size; j++) {
+      enqueue(slice_queue, i * block_size, j * block_size);
+      num_blocks++;
+    }
+  }
 
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
     perror("Erro na criação do Socket");
@@ -185,8 +190,9 @@ int main(int argc, char **argv) {
     pthread_detach(s.cli_t[s.curr]);
   }
 
-  printf("Todas as %d conexões foram aceitas. Aguardando processamento...\n",
-         num_cli);
+  printf("Todas as %d conexões foram aceitas. Aguardando processamento de %d "
+         "chunks de tamanho %d...\n",
+         num_cli, num_blocks, block_size);
 
   // spin lock if there is any data to be processed
   while (true) {

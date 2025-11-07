@@ -51,7 +51,6 @@ int main(int argc, char **argv) {
     recv_data[bytes_recv] = '\0';
     // Imprime a resposta ou fecha o socket se havia pedido
     if (strcmp(recv_data,"q")!=0 || strcmp(recv_data,"Q")!=0) {
-      printf("\n DADO RECEBIDO = %s " , recv_data);
       int *orig = (int*)malloc(x * y * sizeof(int));
       int *processed_data = (int*)send_data; 
       memcpy(orig, recv_data, (int)x * (int)y * sizeof(int));
@@ -67,6 +66,7 @@ int main(int argc, char **argv) {
         }
       }
       free(orig);
+      printf("Processed chunk;\n");
       send(sock, processed_data, x*y*sizeof(int), 0);
     }
     else {
