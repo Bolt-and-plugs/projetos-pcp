@@ -132,7 +132,7 @@ int main(int argc, char **argv) {
     printf("\nConexão recebida (Cliente: %s , Porta: %d)\n",
            inet_ntoa(s.client_addr[s.curr].sin_addr), ntohs(s.client_addr[s.curr].sin_port));
   
-    // pass idx and addr for each thread
+    // pass idx and addr for le(result, N, false); no need anymoreeach thread
     thread_args *ta;
     ta = malloc(sizeof(thread_args));
     ta->idx = s.curr;
@@ -163,6 +163,7 @@ int main(int argc, char **argv) {
         - H is the height of the block
         - W x H compose block's dimension
         */
+  write_file(file_path, image, IMAGE_SIZE);
   clock_gettime(CLOCK_MONOTONIC, &end);
   //write_x_to_file(result, N, false); no need anymore.
   sub_timespec(start, end, &_time);
