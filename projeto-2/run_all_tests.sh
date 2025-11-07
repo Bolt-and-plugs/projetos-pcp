@@ -32,10 +32,16 @@ get_num_clientes() {
 get_block_dims() {
     TEST_CASE=$1
     case $TEST_CASE in
-        1|2|3|4|5)   echo "200 200" ;;  # blocos grandes (1 cliente)
-        6|7)         echo "200 100" ;;  # dois clientes
-        8|9|10)      echo "100 100" ;;  # quatro clientes
-        11|12|13|14) echo "50 50" ;;    # muitos clientes, blocos menores
+        1)   echo "2000 2000" ;;  # blocos grandes (1 cliente)
+        2|7)  echo "2000 1000" ;;
+        3|6) echo "1000 2000" ;;
+        4|10) echo "1000 1000" ;;
+        5|8) echo "500 2000" ;;
+        9) echo "2000 500" ;;
+        11) echo "2000 250" ;;
+        12) echo "250 2000" ;;
+        13) echo "1000 500" ;;
+        14) echo "500 1000" ;;
         *)           echo "100 100" ;;
     esac
 }
