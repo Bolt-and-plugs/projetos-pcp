@@ -78,7 +78,6 @@ int main(int argc, char **argv) {
       }
     }
     free(orig);
-    printf("Processed chunk;\n");
     send_all(sock, processed_data, x*y*sizeof(int));
     printf("Processed chunk;\n");
   }

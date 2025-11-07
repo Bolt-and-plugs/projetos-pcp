@@ -4,15 +4,14 @@
 
 # --- Configurações ---
 HOSTNAME="localhost"
-IMAGE_FILE="assets/imagem.txt"     # Coloque o nome do seu arquivo de imagem de entrada [cite: 13]
+IMAGE_FILE="assets/imagem.txt"    # Coloque o nome do seu arquivo de imagem de entrada
 SERVER_EXEC="./server"
 CLIENT_EXEC="./client"
-NUM_EXECUCOES=3             # Média de 3 execuções por teste 
-LOG_FILE="resultados_testes.log"
+NUM_EXECUCOES=3                 # Média de 3 execuções por teste 
 
 # --- Limpa o log anterior ---
-echo "Iniciando suíte de testes - $(date)" > $LOG_FILE
-echo "-----------------------------------" >> $LOG_FILE
+echo "Iniciando suíte de testes - $(date)"
+echo "-----------------------------------"
 
 # --- Funções Auxiliares ---
 # Retorna o número de clientes para um dado caso de teste
@@ -28,15 +27,25 @@ get_num_clientes() {
 }
 
 # Retorna as dimensões do bloco (x y) para um dado caso de teste
-# Ajuste estes valores conforme a sua configuração de imagem/experimento.
+# ATUALIZADO para corresponder à sua lista de 14 casos.
 get_block_dims() {
     TEST_CASE=$1
     case $TEST_CASE in
-        1|2|3|4|5)   echo "200 200" ;;  # blocos grandes (1 cliente)
-        6|7)         echo "200 100" ;;  # dois clientes
-        8|9|10)      echo "100 100" ;;  # quatro clientes
-        11|12|13|14) echo "50 50" ;;    # muitos clientes, blocos menores
-        *)           echo "100 100" ;;
+        1)  echo "2000 2000" ;;  # 1 cliente, imagem inteira
+        2)  echo "2000 1000" ;;  # 1 cliente, 2 blocos de 2000x1000
+        3)  echo "1000 2000" ;;  # 1 cliente, 2 blocos de 1000x2000
+        4)  echo "1000 1000" ;;  # 1 cliente, 4 blocos de 1000x1000
+        5)  echo "500 2000"  ;;  # 1 cliente, 4 blocos de 500x2000 (assumindo que eram 4)
+        6)  echo "1000 2000" ;;  # 2 clientes, 2 blocos de 1000x2000
+        7)  echo "2000 1000" ;;  # 2 clientes, 2 blocos de 2000x1000
+        8)  echo "500 2000"  ;;  # 4 clientes, 4 blocos de 500x2000
+        9)  echo "2000 500"  ;;  # 4 clientes, 4 blocos de 2000x500
+	10) echo "1000 1000" ;;  # 4 clientes, 4 blocos de 1000x1000
+        11) echo "2000 250"  ;;  # 8 clientes, 8 blocos de 2000x250
+        12) echo "250 2000"  ;;  # 8 clientes, 8 blocos de 250x2000
+        13) echo "1000 500"  ;;  # 8 clientes, 8 blocos de 1000x500
+        14) echo "500 1000"  ;;  # 8 clientes, 8 blocos de 500x1000
+        *)  echo "100 100" ;;  # Padrão
     esac
 }
 
@@ -52,7 +61,7 @@ if [ ! -f "$IMAGE_FILE" ]; then
 fi
 
 # --- Loop Principal ---
-# Itera por todos os 14 casos de teste [cite: 19-33]
+# Itera por todos os 14 casos de teste
 for ((test_id=1; test_id<=14; test_id++)); do
     
     echo "--- INICIANDO CASO DE TESTE $test_id ---"
@@ -64,46 +73,34 @@ for ((test_id=1; test_id<=14; test_id++)); do
     fi
 
     echo "Caso $test_id: $NUM_CLIENTES cliente(s)"
-    echo "--- Caso de Teste $test_id ($NUM_CLIENTES cliente(s)) ---" >> $LOG_FILE
+    echo "--- Caso de Teste $test_id ($NUM_CLIENTES cliente(s)) ---"
 
     # obtém dimensões do bloco para este caso de teste
     read X Y <<< $(get_block_dims $test_id)
     echo "  Usando dimensões de bloco: X=$X Y=$Y"
-    echo "  Usando dimensões de bloco: X=$X Y=$Y" >> $LOG_FILE
+    echo "  Usando dimensões de bloco: X=$X Y=$Y" 
 
     # Itera 3 vezes para a média 
     for ((exec_num=1; exec_num<=$NUM_EXECUCOES; exec_num++)); do
         echo "  Iniciando execução $exec_num/$NUM_EXECUCOES..."
         
-    # 1. Inicia o servidor em background
-    # Passamos: 1) caminho do arquivo 2) número de clientes 3) X 4) Y
-    $SERVER_EXEC $IMAGE_FILE $NUM_CLIENTES $X $Y &
+        # 1. Inicia o servidor em background
+        # Passamos: 1) caminho do arquivo 2) número de clientes 3) X 4) Y
+        echo "  Executando: $SERVER_EXEC $IMAGE_FILE $NUM_CLIENTES $X $Y"
+        $SERVER_EXEC $IMAGE_FILE $NUM_CLIENTES $X $Y &
         SERVER_PID=$! # Salva o ID do processo (PID) do servidor
 
-        # Pequena pausa para garantir que o servidor está pronto (bind/listen)
-        sleep 1
+        sleep 2
 
-        # 2. Inicia os N clientes em background
         for ((c=0; c<$NUM_CLIENTES; c++)); do
-            # O cliente agora recebe apenas X e Y (tamanhos do bloco)
-            $CLIENT_EXEC $X $Y &
+            echo "  Iniciando cliente $c: $CLIENT_EXEC $HOSTNAME $X $Y"
+            $CLIENT_EXEC $HOSTNAME $X $Y &
         done
 
-        # 3. Espera o servidor terminar
-        # (Seu servidor deve ser programado para fechar após
-        # processar a imagem inteira para o teste atual)
         wait $SERVER_PID
         
         echo "  Execução $exec_num concluída."
         
-        # Você deve modificar seu servidor para escrever o tempo
-        # no arquivo de log $LOG_FILE, como pedido no ToDo (item 3)
-        
-        sleep 1 # Pausa entre as execuções para tudo "assentar"
+        sleep 2
     done
-    
-    echo "--- CASO DE TESTE $test_id CONCLUÍDO ---"
-    echo "-----------------------------------" >> $LOG_FILE
 done
-
-echo "Suíte de testes finalizada. Resultados em $LOG_FILE"

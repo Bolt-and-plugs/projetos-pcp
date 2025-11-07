@@ -209,16 +209,14 @@ int main(int argc, char **argv) {
     usleep(10000); // 10ms
   }
 
-  sprintf(file_output, "assets/outputs/server-processed-%dx%d.dat", IMAGE_SIZE,
-          IMAGE_SIZE);
-  write_file(file_output, image, IMAGE_SIZE);
   clock_gettime(CLOCK_MONOTONIC, &end);
+  sprintf(file_output, "assets/outputs/server-processed-%d_cli-%dx%d.dat",
+          num_cli, width, height);
+  write_file(file_output, image, IMAGE_SIZE);
   sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec,
-         _time.tv_nsec, width * height);
   fprintf(
       file,
-      "Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d ",
+      "Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d\n",
       (int)_time.tv_sec, _time.tv_nsec, num_cli, width, height);
   fclose(file);
   close(sock);

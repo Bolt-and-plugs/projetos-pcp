@@ -25,8 +25,8 @@ void print_arr(long double *x, int N);
 void print_mat(long double **x, int N, int M);
 
 typedef struct {
-    int queue_x[8];
-    int queue_y[8];
+    int queue_x[800];
+    int queue_y[800];
     int head;
     int tail;
 } queue;
