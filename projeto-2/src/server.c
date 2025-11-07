@@ -1,11 +1,12 @@
 #include "server.h"
 #include <stdlib.h>
+#include <linux/time.h>
 
 server s;
 int **image;
 int x, y;
 queue* slice_queue;
-
+int N;
 void *get_connection(void *args) {
   thread_args *args_ptr = (thread_args*)args;
   int idx = args_ptr->idx, fd = args_ptr->fd;
@@ -33,8 +34,10 @@ void *get_connection(void *args) {
       // recebe a mesma seção processada
       bytes_recv = recv(fd ,recv_data, x*y, 0);
       recv_data[bytes_recv] = '\0';
+      //Basicamente pegar os índices enviados da fatia e setar esses bytes
       // escreve a seção de volta na imagem
       printf("Cliente %d processou: %s\n", idx, recv_data);
+      memcpy(image[x_ur][y_ur], &recv_data, x*y); //não saber sintaxe do c ver se funciona risos risos
       memset(recv_data, 0, x*y);
     }
   }
@@ -45,14 +48,15 @@ void *get_connection(void *args) {
 
 int main(int argc, char **argv) {
   int sock, connected, t = 1;
-  unsigned int sin_size;
+  unsigned int sin_size; 
   s.curr = 0;
   s.tail = atoi(argv[2]) - 1;
   sem_init(&s.mutex, 0, 1);
-
-  x = atoi(argv[3]);
-  y = atoi(argv[4]);
-
+  N = s.tail;
+  x = atoi(argv[3]);//Width
+  y = atoi(argv[4]);//Height
+  int W = x;
+  int H = y;
   slice_queue = (queue*) malloc(sizeof(queue));
   init_queue(slice_queue);
 
@@ -104,7 +108,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (listen(sock, CLI_NUM) == -1) {
+  if (listen(sock, N) == -1) {
     perror("Erro na definição do tamanho da fila de entrada");
     exit(1);
   }
@@ -113,13 +117,18 @@ int main(int argc, char **argv) {
   printf("\nServidor TCP esperando por cliente na porta 5000\n");
   fflush(stdout);
 
-
+  FILE *file;
+  puts("Initializing sequential execution");
+  const char *file_name = "time_related/times.dat";
+  file = fopen(file_name, "a");
+  struct timespec start, end, _time;
   // loop do servidor
   while (true) {
-
     sin_size = sizeof(struct sockaddr_in);
+    if(N == s.curr) break;
     connected = accept(sock, (struct sockaddr *)&s.client_addr[s.curr], &sin_size);
 
+    clock_gettime(CLOCK_MONOTONIC, &start);
     printf("\nConexão recebida (Cliente: %s , Porta: %d)\n",
            inet_ntoa(s.client_addr[s.curr].sin_addr), ntohs(s.client_addr[s.curr].sin_port));
   
@@ -131,17 +140,35 @@ int main(int argc, char **argv) {
 
     sem_wait(&s.mutex);
     if (s.tail == s.curr)
-      s.curr = s.curr + 1 % CLI_NUM;
+      s.curr = s.curr + 1 % N;
     else 
-      s.curr = s.tail + 1 % CLI_NUM;
+      s.curr = s.tail + 1 % N;
 
-    s.tail = s.tail + 1 % CLI_NUM;
+    s.tail = s.tail + 1 % N;
     sem_post(&s.mutex);
     
     pthread_create(&s.cli_t[s.curr], NULL, get_connection, (void*)ta);
     pthread_detach(s.cli_t[s.curr]);
-  }
 
+    
+  }
+  while(!isempty(queue)){// function to be implemented.
+  }
+        //lógica de remontagem.
+          /* 
+        _NOT FINISHED YET, IT DEPENDS ON "SENDING" AND "RECEIVING" IMPLEMENTATION
+        - fn is the function
+        - N is the number os blocks that are being transmitted
+        - W is the width of the block
+        - H is the height of the block
+        - W x H compose block's dimension
+        */
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  //write_x_to_file(result, N, false); no need anymore.
+  sub_timespec(start, end, &_time);
+  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Time elapsed: %d.%.9ld | Num Blocks: %d | Blocks Dimension: %d x %d " , (int)_time.tv_sec, _time.tv_nsec, N, W, H);
+  fclose(file);
   close(sock);
   return 0;
 }

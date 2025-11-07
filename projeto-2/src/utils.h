@@ -10,7 +10,7 @@ void read_input(const char *path, int **A, const int n);
 
 bool write_file(const char *path, char *buffer);
 
-void measure_fn_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,int N);
+void measure_fn_time(long double *(fn)(int, int, int), int N, int W, int H);
 bool stop_test(long double *x1, long double *x2, long double precision, int N);
 
 long double *arr_norm(long double *x1, long double *x2, int N);
