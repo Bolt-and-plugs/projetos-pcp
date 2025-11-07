@@ -127,5 +127,5 @@ void dequeue(queue *q){
 }
 
 bool isEmpty(queue *q) {
-  return (q->head == q->tail) ? true : false;
+  return (q->head == q->tail);
 }
