@@ -2,6 +2,8 @@
 #include "math.h"
 #include "time.h"
 
+enum { NS_PER_SECOND = 1000000000 };
+
 void read_input(const char *path, int **A, const int n) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
@@ -23,6 +25,20 @@ void read_input(const char *path, int **A, const int n) {
     }
   }
 }
+
+void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
+  td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
+  td->tv_sec = t2.tv_sec - t1.tv_sec;
+  if (td->tv_sec > 0 && td->tv_nsec < 0) {
+    td->tv_nsec += NS_PER_SECOND;
+    td->tv_sec--;
+  } else if (td->tv_sec < 0 && td->tv_nsec > 0) {
+    td->tv_nsec -= NS_PER_SECOND;
+    td->tv_sec++;
+  }
+}
+
+
 
 bool write_file(const char *path, int **buffer, const int n) {
   FILE *fp = fopen(path, "w");
@@ -48,20 +64,6 @@ bool write_file(const char *path, int **buffer, const int n) {
   fclose(fp);
 
   return true;
-}
-
-enum { NS_PER_SECOND = 1000000000 };
-
-void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
-  td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
-  td->tv_sec = t2.tv_sec - t1.tv_sec;
-  if (td->tv_sec > 0 && td->tv_nsec < 0) {
-    td->tv_nsec += NS_PER_SECOND;
-    td->tv_sec--;
-  } else if (td->tv_sec < 0 && td->tv_nsec > 0) {
-    td->tv_nsec -= NS_PER_SECOND;
-    td->tv_sec++;
-  }
 }
 
 static void write_x_to_file(long double *x, int N, bool omp) {
@@ -122,4 +124,8 @@ void enqueue(queue *q, int x, int y){
 
 void dequeue(queue *q){
   q->head++;
+}
+
+bool isEmpty(queue *q) {
+  return (q->head == q->tail) ? true : false;
 }

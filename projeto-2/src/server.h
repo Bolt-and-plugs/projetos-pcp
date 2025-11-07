@@ -5,6 +5,8 @@
 #include "pthread.h"
 #include "semaphore.h"
 #include "utils.h"
+#include <stdlib.h>
+#include <time.h>
 
 
 #define SERVER_PORT 5000
