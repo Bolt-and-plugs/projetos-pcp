@@ -9,20 +9,27 @@ void *get_connection(void *args) {
   int idx = args_ptr->idx, fd = args_ptr->fd;
   int bytes_recv;
   free(args_ptr);
-
   char *send_data, *recv_data;
-
   size_t buffer_size = sizeof(int) * (size_t)width * (size_t)height;
+
   send_data = malloc(buffer_size);
   recv_data = malloc(buffer_size);
   if (send_data == NULL || recv_data == NULL) {
     perror("Falha ao alocar buffers");
-    exit(1);
+    return NULL;
   }
 
   while (true) {
-    bytes_recv = recv(fd, recv_data, sizeof("ok"), 0);
+    memset(recv_data, 0, buffer_size);
+    bytes_recv = recv(fd, recv_data, strlen("ok"), 0);
+
+    if (bytes_recv <= 0) {
+      free(send_data);
+      free(recv_data);
+      return NULL;
+    }
     recv_data[bytes_recv] = '\0';
+
     if (strcmp(recv_data, "ok") == 0) {
       printf("Cliente %d: %s\n", idx, recv_data);
       memset(recv_data, 0, width * height);
@@ -31,7 +38,9 @@ void *get_connection(void *args) {
       if (isEmpty(slice_queue)) {
         finished_threads++;
         sem_post(&s.mutex);
-        send(fd, "q", sizeof("q"), 0);
+        free(send_data);
+        free(recv_data);
+        send(fd, "q", strlen("q"), 0);
         return NULL;
       }
 
@@ -48,20 +57,16 @@ void *get_connection(void *args) {
         ptr += width;
       }
 
-      send(fd, ptr, buffer_size, 0);
+      send_all(fd, send_data, buffer_size);
       // recebe a mesma seção processada
-      bytes_recv = recv(fd, recv_data, buffer_size, 0);
-      recv_data[bytes_recv] = '\0';
-      // Basicamente pegar os índices enviados da fatia e setar esses bytes
-      //  escreve a seção de volta na imagem
-      printf("Cliente %d processou: %s\n", idx, recv_data);
-      // parse recv data to image
-      int curr_val = 0;
-      for (int i = 0; i < bytes_recv; i += sizeof(int)) {
-        curr_val = atoi(&recv_data[i]);
-        image[x_ur][y_ur] = curr_val;
+      printf("esperando\n");
+      bytes_recv = recv_all(fd, recv_data, buffer_size);
+      ptr = (int *)recv_data;
+      for (int i = 0; i < height; i++) {
+        memcpy(&image[x_ur + i][y_ur], ptr, width * sizeof(int));
+        ptr += width;
       }
-      memset(recv_data, 0, width * height);
+      memset(recv_data, 0, buffer_size);
     }
   }
 
@@ -71,18 +76,20 @@ void *get_connection(void *args) {
 
 void init_image() {
   image = malloc(sizeof(int *) * IMAGE_SIZE);
-  if (!image) {
-    perror("Could not allocate image buffer");
-    free(image);
+  if (image == NULL) {
+    perror("Could not allocate image rows pointer");
     exit(1);
   }
 
   for (int i = 0; i < IMAGE_SIZE; i++) {
     image[i] = malloc(sizeof(int) * IMAGE_SIZE);
-    if (!image[i]) {
-      perror("Could not allocate image buffer");
-      for (int j = 0; j <= i; j++)
-        free(image[i]);
+    if (image[i] == NULL) {
+      perror("Could not allocate image row");
+      // free previously allocated rows
+      for (int j = 0; j < i; j++) {
+        free(image[j]);
+      }
+      free(image);
       exit(1);
     }
   }
@@ -101,14 +108,15 @@ int main(int argc, char **argv) {
   char file_output[BUFF_SIZE];
   char file_path[BUFF_SIZE];
   FILE *file;
+  struct timespec start, end, _time;
 
   s.curr = 0;
   s.tail = num_cli;
   sem_init(&s.mutex, 0, 1);
 
-  width = atoi(argv[3]);  // Width
-  height = atoi(argv[4]); // Height
-  int block_size = atoi(argv[5]), num_blocks = 0;
+  width = atoi(argv[3]);  // Block Width
+  height = atoi(argv[4]); // Block Height
+  int block_size = width * height, num_blocks = 0;
 
   slice_queue = (queue *)malloc(sizeof(queue));
   init_queue(slice_queue);
@@ -119,10 +127,12 @@ int main(int argc, char **argv) {
 
   init_image();
   read_input(file_path, image, IMAGE_SIZE);
+
   int num_chunks = (width * height) / block_size;
-  for (int i = 0; i < width / block_size; i++) {
-    for (int j = 0; j < height / block_size; j++) {
-      enqueue(slice_queue, i * block_size, j * block_size);
+
+  for (int i = 0; i < IMAGE_SIZE / height; i++) {
+    for (int j = 0; j < IMAGE_SIZE / width; j++) {
+      enqueue(slice_queue, i * height, j * width);
       num_blocks++;
     }
   }
@@ -156,7 +166,6 @@ int main(int argc, char **argv) {
   fflush(stdout);
 
   file = fopen(file_name, "a");
-  struct timespec start, end, _time;
 
   // loop do servidor
   for (int i = 0; i < num_cli; i++) {
@@ -174,20 +183,11 @@ int main(int argc, char **argv) {
     // thread
     thread_args *ta;
     ta = malloc(sizeof(thread_args));
-    ta->idx = s.curr;
+    ta->idx = i;
     ta->fd = connected;
 
-    sem_wait(&s.mutex);
-    if (s.tail == s.curr)
-      s.curr = s.curr + 1 % num_cli;
-    else
-      s.curr = s.tail + 1 % num_cli;
-
-    s.tail = s.tail + 1 % num_cli;
-    sem_post(&s.mutex);
-
-    pthread_create(&s.cli_t[s.curr], NULL, get_connection, (void *)ta);
-    pthread_detach(s.cli_t[s.curr]);
+    pthread_create(&s.cli_t[i], NULL, get_connection, (void *)ta);
+    pthread_detach(s.cli_t[i]);
   }
 
   printf("Todas as %d conexões foram aceitas. Aguardando processamento de %d "

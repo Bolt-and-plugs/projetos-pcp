@@ -1,6 +1,37 @@
 #include "utils.h"
 #include "math.h"
 #include "time.h"
+#include <errno.h>
+
+ssize_t send_all(int fd, const void *buf, size_t len) {
+    const char *p = (const char *)buf;
+    size_t total = 0;
+    while (total < len) {
+        ssize_t n = send(fd, p + total, len - total, 0);
+        if (n <= 0) {
+            if (n == -1 && errno == EINTR) continue;
+            return -1;
+        }
+        total += (size_t)n;
+    }
+    return (ssize_t)total;
+}
+
+ssize_t recv_all(int fd, void *buf, size_t len) {
+    char *p = (char *)buf;
+    size_t total = 0;
+    while (total < len) {
+        ssize_t n = recv(fd, p + total, len - total, 0);
+        if (n == 0) return (ssize_t)total; // orderly shutdown
+        if (n < 0) {
+            if (errno == EINTR) continue;
+            return -1;
+        }
+        total += (size_t)n;
+    }
+    return (ssize_t)total;
+}
+
 
 enum { NS_PER_SECOND = 1000000000 };
 
