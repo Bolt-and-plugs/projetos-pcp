@@ -35,42 +35,64 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-void measure_fn_omp_time(long double*(fn)(long double **, long double *, int, int, char*, int), long double **A, long double *b,
-                     int N, int num_threads, char* schedule, int chunk) {
-  FILE *file;
-  const char *file_name = "time_related/parallel_time.dat";
-  puts("Initializing parallel execution");
 
-  file = fopen(file_name, "a");
-  struct timespec start, end, _time;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(A, b, N, num_threads, schedule, chunk);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  write_x_to_file(result, N, true);
-  sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size:%d | Schedule:%s | Chunk:%d | Num_Threads:%d\n" , (int)_time.tv_sec, _time.tv_nsec, N, schedule, chunk, num_threads);
-  fclose(file);
+void read_input(const char *path, int **A, int *N, int *M) {
+  FILE *fp = fopen(path, "r");
+  bool ex = false;
+  int i = 0, j = 0;
+
+  if (fp == NULL) {
+    perror("Error opening file");
+    
+    exit(EXIT_FAILURE);
+  }
+
+  if (fscanf(fp, "%d %d", N, M) != 1) {
+    fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
+    fclose(fp);
+    exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+      if (fscanf(fp, "%d", &A[i][j]) != 1) {
+        fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
+        fclose(fp);
+        exit(EXIT_FAILURE);
+      }
+    }
+  }
 
 }
 
-void measure_fn_seq_time(long double *(fn)(long double **, long double *, int), long double **A, long double *b,
-                     int N) {
-  FILE *file;
-  puts("Initializing sequential execution");
-  const char *file_name = "time_related/sequential_time.dat";
-  file = fopen(file_name, "a");
-  struct timespec start, end, _time;
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  long double *result = fn(A, b, N);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  write_x_to_file(result, N, false);
-  sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
-  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
-  fclose(file);
-}
 
+bool write_file(const char *path, int **A, int N, int M) {
+  FILE *fp = fopen(path, "w");
+
+  if (!fp) {
+    fprintf(stderr, "Could not write file down");
+    fclose(fp);
+    return false;
+  }
+
+  for (int i = 0; i < N; i++) {
+    for (int j = 0; j < M; j++) {
+      if(fprintf(fp, "%d", A[i][j]) < 0) {
+        fprintf(stderr, "Could not write file down");
+        fclose(fp);
+        return false;
+      }
+    }
+    if(fprintf(fp, "\n") < 0) {
+
+      fprintf(stderr, "Could not write file down");
+      fclose(fp);
+      return false;
+    }
+  }
+
+ return true;
+}
 
 long double *arr_norm(long double *x1, long double *x2, int N) {
   long double *x3 = malloc(sizeof(long double) * N);
