@@ -53,8 +53,8 @@ void read_input(const char *path, int **A, int *N, int *M) {
     exit(EXIT_FAILURE);
   }
 
-  for (int i = 0; i < N; i++) {
-    for (int j = 0; j < M; j++) {
+  for (int i = 0; i < *N; i++) {
+    for (int j = 0; j < *M; j++) {
       if (fscanf(fp, "%d", &A[i][j]) != 1) {
         fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
         fclose(fp);
