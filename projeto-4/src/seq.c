@@ -1,6 +1,4 @@
-#include "utils.h"
-#include "math.h"
-#include "time.h"
+#include "seq.h"
 
 enum { NS_PER_SECOND = 1000000000 };
 
@@ -18,9 +16,9 @@ void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
 
 static void write_x_to_file(long double *x, int N, bool omp) {
   char buffer[256];
-  if(omp)
+  if (omp)
     sprintf(buffer, "outputs/omp-mat-%d-%d.dat", N, N);
-  else 
+  else
     sprintf(buffer, "outputs/seq-mat-%d-%d.dat", N, N);
   FILE *fp = fopen(buffer, "w");
 
@@ -35,7 +33,6 @@ static void write_x_to_file(long double *x, int N, bool omp) {
   fclose(fp);
 }
 
-
 void read_input(const char *path, int **A, int *N, int *M) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
@@ -43,7 +40,7 @@ void read_input(const char *path, int **A, int *N, int *M) {
 
   if (fp == NULL) {
     perror("Error opening file");
-    
+
     exit(EXIT_FAILURE);
   }
 
@@ -62,9 +59,7 @@ void read_input(const char *path, int **A, int *N, int *M) {
       }
     }
   }
-
 }
-
 
 bool write_file(const char *path, int **A, int N, int M) {
   FILE *fp = fopen(path, "w");
@@ -77,13 +72,13 @@ bool write_file(const char *path, int **A, int N, int M) {
 
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
-      if(fprintf(fp, "%d", A[i][j]) < 0) {
+      if (fprintf(fp, "%d", A[i][j]) < 0) {
         fprintf(stderr, "Could not write file down");
         fclose(fp);
         return false;
       }
     }
-    if(fprintf(fp, "\n") < 0) {
+    if (fprintf(fp, "\n") < 0) {
 
       fprintf(stderr, "Could not write file down");
       fclose(fp);
@@ -91,7 +86,7 @@ bool write_file(const char *path, int **A, int N, int M) {
     }
   }
 
- return true;
+  return true;
 }
 
 long double *arr_norm(long double *x1, long double *x2, int N) {
@@ -117,4 +112,21 @@ void print_mat(long double **x, int N, int M) {
     }
     puts("");
   }
+}
+
+int main(int argc, char **argv) {
+  int N, M, **A;
+  const char *input_path = argv[1];
+  const char *output_path = argv[2];
+  printf("MPI module initialized.\n");
+
+  // input
+  read_input(input_path, A, &N, &M);
+
+  // logic
+
+  // output
+
+  write_file(output_path, A, N, M);
+  return 0;
 }

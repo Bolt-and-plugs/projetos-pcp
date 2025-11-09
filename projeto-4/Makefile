@@ -1,2 +1,3 @@
 all:
-	gcc -o mpi src/mpi.c src/utils.c -lm -lpthread -fopenmp
+	mpicc -o mpi src/mpi.c
+	gcc -o seq src/seq.c

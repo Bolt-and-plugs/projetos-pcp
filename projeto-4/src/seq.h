@@ -1,5 +1,5 @@
-#ifndef _MPI
-#define _MPI
+#ifndef _SEQ
+#define _SEQ
 
 #include "defines.h"
 #include "utils.h"
