@@ -1,3 +1,3 @@
 all:
-	mpicc -o mpi src/mpi.c
-	gcc -o seq src/seq.c
+	mpicc -o mpi src/main_mpi.c src/utils.c
+	gcc -o seq src/seq.c src/utils.c

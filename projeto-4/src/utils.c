@@ -1,4 +1,4 @@
-#include "mpi.h"
+#include "utils.h"
 
 enum { NS_PER_SECOND = 1000000000 };
 
@@ -105,6 +105,28 @@ void print_arr(long double *x, int N) {
   puts("");
 }
 
+bool is_every_elem_one(int **A, int N, int M) {
+  if (!A)
+    return false;
+
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < M; j++)
+      if (A[i][j] != 1) return false;
+
+  return true;
+}
+
+bool is_every_elem_zero(int **A, int N, int M) {
+  if (!A)
+    return false;
+
+  for (int i = 0; i < N; i++)
+    for (int j = 0; j < M; j++)
+      if (A[i][j] != 0) return false;
+
+  return true;
+}
+
 void print_mat(long double **x, int N, int M) {
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < M; j++) {
@@ -114,19 +136,3 @@ void print_mat(long double **x, int N, int M) {
   }
 }
 
-int main(int argc, char **argv) {
-  int N, M, **A;
-  const char *input_path = argv[1];
-  const char *output_path = argv[2];
-  printf("MPI module initialized.\n");
-
-  // input
-  read_input(input_path, A, &N, &M);
-
-  // logic
-
-  // output
-
-  write_file(output_path, A, N, M);
-  return 0;
-}
