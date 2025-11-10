@@ -136,3 +136,20 @@ void print_mat(long double **x, int N, int M) {
   }
 }
 
+
+
+void measure_fn_time(void *(fn)(int **, int, int), int **A, int N,
+                     int M) {
+  FILE *file;
+  puts("Initializing sequential execution");
+  const char *file_name = "assets/output/time_measure.txt";
+  file = fopen(file_name, "a");
+  struct timespec start, end, _time;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  fn(A, N, M);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  sub_timespec(start, end, &_time);
+  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
+  fclose(file);
+}

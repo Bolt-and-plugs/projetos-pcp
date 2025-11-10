@@ -4,8 +4,10 @@ title: melhorar shell script para tasks pedidas pelo aleardo
 status: To Do
 assignee: []
 created_date: '2025-11-09 13:10'
+updated_date: '2025-11-10 17:55'
 labels: []
 dependencies: []
+ordinal: 2000
 ---
 
 ## Description
