@@ -2,23 +2,20 @@
 #include <cuda_runtime.h>
 #include <stdlib.h>
 #include <time.h>
-// Se o "utils.h" for um arquivo vazio, você pode removê-lo se ele causar problemas de inclusão.
-// Por ora, vamos assumir que ele existe e é necessário.
+
 #include "utils.h" 
 
 #define ITERATION_END 404
 #define ITERATION_CONTINUE 101
 
-// Macro ajustada para usar ponteiro 1D de forma clara
-// Note: A_current deve ser um ponteiro int* no escopo do kernel.
+
 #define GET_STATE(R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
 
-// Função auxiliar para leitura (mantida como fornecida)
+
 void read_input(const char *path, int ***A, int *N, int *M) {
     FILE *fp = fopen(path, "r");
-    // bool ex = false; // Variável não utilizada
-    // int i = 0, j = 0; // Variáveis de debug não utilizadas
+
 
     if (fp == NULL) {
         perror("Error opening file");
@@ -66,23 +63,21 @@ int verify_end_population(int **A, int N, int M) {
     return ITERATION_END;
 }
 
-// Função para contagem e escrita da saída (Requisito 2.2)
+
 void write_output(const char *output_path, int **A, int N, int M) {
-    long total_dead = 0; // Contagem de -2
-    long total_survivors = 0; // Contagem de 1 e -1 (Saudável ou Contaminado)
+    long total_dead = 0; 
+    long total_survivors = 0; 
     
-    // A simulação para quando não há mais -1 ou -2.
-    // Assim, o estado final terá apenas 1 (Saudável) e 0 (Ninguém).
-    // Contamos o que restou (Sobreviventes) e o que foi morto (-2), se houver.
+
     
     for (int r = 0; r < N; r++) {
         for (int c = 0; c < M; c++) {
             if (A[r][c] == 1) {
                 total_survivors++;
             } else if (A[r][c] == -1) {
-                total_survivors++; // Contaminados são sobreviventes até o momento da morte.
+                total_survivors++; 
             } else if (A[r][c] == -2) {
-                total_dead++; // Pessoas que morreram nesta iteração final.
+                total_dead++; 
             }
         }
     }
@@ -93,11 +88,10 @@ void write_output(const char *output_path, int **A, int N, int M) {
         return;
     }
     
-    // A soma de sobreviventes pode ser ajustada se quisermos a contagem de mortos *acumulados*.
-    // Como o problema pede os valores finais, seguimos a contagem do último estado:
+
     
     fprintf(fp, "Total de Sobreviventes (Saudáveis ou Contaminados): %ld\n", total_survivors);
-    // Se a simulação terminou por estabilidade, total_dead deve ser 0
+
     fprintf(fp, "Total de Pessoas Mortas na Matriz Final: %ld\n", total_dead); 
     
     fclose(fp);
@@ -124,8 +118,7 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, unsigned
     int current_state = A_current[index];
     int next_state = current_state; 
 
-    if (current_state == 1) { // Saudável
-        // Checagem de vizinhos
+    if (current_state == 1) { 
         int neighbor_up    = GET_STATE(r - 1, c);
         int neighbor_down  = GET_STATE(r + 1, c);
         int neighbor_left  = GET_STATE(r, c - 1);
@@ -134,7 +127,7 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, unsigned
         if (neighbor_up <= -1 || neighbor_down <= -1 ||
             neighbor_left <= -1 || neighbor_right <= -1) {
             
-            next_state = -1; // Torna-se Contaminado
+            next_state = -1; 
         }
     }
     else if (current_state == -1) {
@@ -164,19 +157,18 @@ int main(int argc, char **argv){
         return -1;
     }
 
-    // --- 1. Leitura e Setup Inicial ---
+
     const char *file_path = argv[1];
     int num_threads = atoi(argv[2]);
     int num_blocks = atoi(argv[3]);
     // const char *device = argv[4]; 
-    const char *output_file = "simulation_output.txt"; // Define um nome para o arquivo de saída
+    const char *output_file = "simulation_output.txt"; 
 
-    int **space, N, M; // space é a matriz 2D do Host para verificação
+    int **space, N, M; 
     read_input(file_path, &space, &N, &M);
     int max_iter = N*M;
     int size = N*M*sizeof(int);
 
-    // --- 2. Preparação de Matrizes 1D para Transferência ---
     int *h_current_flat = (int*)malloc(size); 
     int *h_next_flat = (int*)malloc(size); 
     
