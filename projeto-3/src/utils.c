@@ -1,7 +1,7 @@
 #include "utils.h"
 #include "math.h"
 #include "time.h"
-
+#include <cuda_runtime.h>
 enum { NS_PER_SECOND = 1000000000 };
 
 void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
@@ -51,6 +51,19 @@ void read_input(const char *path, int **A, int *N, int *M) {
     fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
     fclose(fp);
     exit(EXIT_FAILURE);
+  }
+
+  for (int i = 0; i < *N; i++) {
+    A[i] = malloc(sizeof(int) * (*M));
+    if (A[i] == NULL) {
+      perror("Could not allocate A row");
+      // free previously allocated rows
+      for (int j = 0; j < i; j++) {
+        free(A[j]);
+      }
+      free(A);
+      exit(1);
+    }
   }
 
   for (int i = 0; i < *N; i++) {
@@ -118,3 +131,5 @@ void print_mat(long double **x, int N, int M) {
     puts("");
   }
 }
+
+
