@@ -15,7 +15,6 @@
 #define NINGUEM 0
 
 
-
 #define GET_STATE(R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
 
@@ -104,16 +103,23 @@ int verify_end_population(int **A, int N, int M) {
 
 void write_output(const char *output_path, int **A, int N, int M, int total_dead) {
     long total_survivors = 0; 
+    long total_nobody = 0;
+    int total_deaths = 0;
     
     // printing the final matrix for verification
     print_matrix(A, N, M);
     
+    // Conta apenas sobreviventes (vivos curados ou contaminados)
     for (int r = 0; r < N; r++) {
         for (int c = 0; c < M; c++) {
             if (A[r][c] == CURADA || A[r][c] == CONTAMINADA) {
                 total_survivors++;
-            } else if (A[r][c] == MORTA || A[r][c] == NINGUEM) {
-                total_dead++; 
+            }
+            else if (A[r][c] == NINGUEM) {
+                total_nobody++;
+            }
+            else {
+                total_deaths++;
             }
         }
     }
@@ -128,12 +134,13 @@ void write_output(const char *output_path, int **A, int N, int M, int total_dead
     
     fprintf(fp, "Total de Sobreviventes (Saudáveis ou Contaminados): %ld\n", total_survivors);
 
-    fprintf(fp, "Total de Pessoas Mortas na Matriz Final: %d\n", total_dead); 
+    fprintf(fp, "Total de Pessoas Mortas na Matriz Final: %d (mortes iniciais: %d | mortes durante iter: %d\n", total_deaths, total_deaths - total_dead, total_dead);
+
+    fprintf(fp, "Total de Casas Vazias (Ninguém): %ld\n", total_nobody);
     
     fclose(fp);
     printf("Resultados escritos em: %s\n", output_path);
 }
-
 
 __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandState_t *states, int *total_dead) {
     int total_elements = N * M;
@@ -153,53 +160,84 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandSt
         int neighbor_left  = GET_STATE(r, c - 1);
         int neighbor_right = GET_STATE(r, c + 1);
 
-        if (neighbor_up < 0 || neighbor_down < 0 ||
-            neighbor_left < 0 || neighbor_right < 0) {
-            
+        if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
             next_state = CONTAMINADA; 
         }
     }
-    else if (current_state == -1) {
-        int x = simple_lcg_rand(index, seed);
+    else if (current_state == CONTAMINADA) {
+        int element_id = r * M + c;
 
-        if (x <= 999) { // 0.1 para a pessoa se curar
-            next_state = CURADA; 
-        } else if (x <= 3999) { // 0.3 para continuar contaminada
-            next_state = CONTAMINADA; 
-        } else { // 0.6 para a pessoa morrer    
-            next_state = MORTA; 
-        int element_id = r * M + c;   
         curandState_t local = states[element_id];
         unsigned int random_val = curand(&local);
         states[element_id] = local;
+        
         int x = random_val % 10000;
+        
         if (x <= 999) { // 0.1 
-            next_state = 1; 
+            next_state = CURADA; 
         } else if (x <= 3999) { // 0.3
-            next_state = -1; 
+            next_state = CONTAMINADA; 
         } else { // 0.6 
-            next_state = -2; 
+            next_state = MORTA;
+            // Incrementa o contador de mortos atomicamente (thread-safe)
+            atomicAdd(total_dead, 1);
         }
-    }
-    else if (current_state == MORTA) { 
-        next_state = NINGUEM; 
-    else if (current_state == -2) {
-        atomicAdd(total_dead, 1);
-        next_state = 0; 
     }
 
     A_next[index] = next_state;
+}
 
-    //printf("print d_next after kernel execution:\n");
-    //d_print_flat_matrix(A_next, N, M);
+__global__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, curandState_t *states, int *total_dead) {
+    int total_elements = N * M;
+    
+    // Processa todos os elementos sequencialmente
+    for (int index = 0; index < total_elements; index++) {
+        int r = index / M; 
+        int c = index % M; 
+
+        int current_state = A_current[index];
+        int next_state = current_state; 
+
+        if (current_state == CURADA) { 
+            int neighbor_up    = GET_STATE(r - 1, c);
+            int neighbor_down  = GET_STATE(r + 1, c);
+            int neighbor_left  = GET_STATE(r, c - 1);
+            int neighbor_right = GET_STATE(r, c + 1);
+
+            if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
+                next_state = CONTAMINADA; 
+            }
+        }
+        else if (current_state == CONTAMINADA) {
+            int element_id = r * M + c;
+
+            curandState_t local = states[element_id];
+            unsigned int random_val = curand(&local);
+            states[element_id] = local;
+            
+            int x = random_val % 10000;
+            
+            if (x <= 999) { // 0.1 
+                next_state = CURADA; 
+            } else if (x <= 3999) { // 0.3
+                next_state = CONTAMINADA; 
+            } else { // 0.6 
+                next_state = MORTA;
+                // Incrementa o contador de mortos atomicamente (thread-safe)
+                atomicAdd(total_dead, 1);
+            }
+        }
+
+        A_next[index] = next_state;
+    }
 }
 
 __global__ void setup_kernel(curandState_t *state, unsigned long seed, int N_total) {
-        int id = threadIdx.x + blockIdx.x * blockDim.x;
-        if (id < N_total) {
-            curand_init(seed, id, 0, &state[id]);
-        }
+    int id = threadIdx.x + blockIdx.x * blockDim.x;
+    if (id < N_total) {
+        curand_init(seed, id, 0, &state[id]);
     }
+}
 
 int main(int argc, char **argv){
     
@@ -250,27 +288,53 @@ int main(int argc, char **argv){
 
     cudaMemset(d_total_dead, 0, sizeof(int));
     cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice); //copiando o conteúdo para a GPU
+
     curandState_t *d_states;
     size_t state_size = N*M * sizeof(curandState_t);
 
     int i = 0;
-    unsigned int seed;
     if (cudaMalloc((void **)&d_states, state_size) != cudaSuccess) {
         printf("Error at allocating cuRAND states on GPU\n");
         return -1;
-    }
-
+    }   
 
     
     unsigned long initial_seed = 42; 
     
-    int blocks_setup = (N*M + num_threads - 1) / num_threads;
+    // Calcula o total de threads que serão lançadas
+    int total_threads = num_blocks * num_threads;
+    int total_elements = N * M;
+    int use_serial = 0; // Flag para indicar se usaremos versão serial
     
-    setup_kernel<<<blocks_setup, num_threads>>>(d_states, initial_seed, N*M);
+    // Verifica se a configuração é insuficiente
+    if (total_threads < total_elements) {
+        printf("AVISO: Configuração insuficiente!\n");
+        printf("  Total de elementos: %d\n", total_elements);
+        printf("  Total de threads: %d blocos × %d threads = %d threads\n", 
+               num_blocks, num_threads, total_threads);
+        printf("  %d elementos NÃO seriam processados na versão paralela!\n", total_elements - total_threads);
+        printf("  Usando VERSÃO SERIAL (execute_iter_serial) para garantir corretude.\n");
+        printf("  AVISO: Isso será MUITO LENTO! Use mais threads para melhor desempenho.\n\n");
+        use_serial = 1;
+    } else {
+        printf("Configuração: %d blocos × %d threads = %d threads (suficiente para %d elementos)\n",
+               num_blocks, num_threads, total_threads, total_elements);
+        printf("Usando versão PARALELA (execute_iter) para melhor desempenho.\n\n");
+    }
+    
+    // Usa num_blocks do usuário para setup_kernel
+    setup_kernel<<<num_blocks, num_threads>>>(d_states, initial_seed, N*M);
 
     for(i = 0; i < max_iter; i++){
         
-        execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
+        // Escolhe a versão do kernel baseado na configuração
+        if (use_serial) {
+            // Versão serial: apenas 1 thread processa tudo sequencialmente
+            execute_iter_serial<<<1, 1>>>(d_current, d_next, N, M, d_states, d_total_dead);
+        } else {
+            // Versão paralela: usa a configuração passada pelo usuário
+            execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
+        }
         
         cudaError_t err = cudaGetLastError();
         if (err != cudaSuccess) {
@@ -289,7 +353,7 @@ int main(int argc, char **argv){
                 space[r][c] = h_next_flat[r * M + c];
             }
         }
-        cudaMemcpy(&total_dead, d_total_dead, sizeof(int), cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
+        
         if(verify_end_population(space, N, M) == ITERATION_END) { //verificação se acabou ou não as iterações
             printf("Simulation ended after %d iterations due to population stability.\n", i + 1);
             break; 
@@ -303,6 +367,10 @@ int main(int argc, char **argv){
     if (i == max_iter) {
         printf("Simulation ended after %d iterations (maximum limit reached).\n", max_iter);
     }
+
+    // Copia o total de mortos acumulado durante todas as iterações
+    cudaMemcpy(&total_dead, d_total_dead, sizeof(int), cudaMemcpyDeviceToHost);
+    printf("Total de mortes durante a simulação: %d\n", total_dead);
 
     write_output(output_file, space, N, M, total_dead);
     
