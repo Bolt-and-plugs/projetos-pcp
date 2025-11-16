@@ -9,7 +9,7 @@ CC := gcc
 NVCCFLAGS := -O3 -Xcompiler -fopenmp
 CFLAGS := -O3 -fopenmp
 INCLUDES := -I$(CUDA_PATH)/include
-LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart -lm
+LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart -lcurand -lm
 
 SRC_CU := src/contamination.cu
 SRC_C := src/utils.c
@@ -22,7 +22,7 @@ TARGET := contamination
 all: $(TARGET)
 
 $(TARGET): $(OBJ)
-	 $(NVCC) $(INCLUDES) $(OBJ) -o $@ -L$(CUDA_PATH)/lib64 -lcudart -lm \
+	 $(NVCC) $(INCLUDES) $(OBJ) -o $@ $(LDFLAGS) \
 	 -Xcompiler "-fopenmp" \
 	 -Xlinker -lgomp \
 	 -Xlinker -lpthread
