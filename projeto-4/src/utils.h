@@ -5,6 +5,14 @@
 #include "math.h"
 #include "time.h"
 
+typedef struct __queue_entry {
+  int bound_x, bound_y;
+} queue_entry;
+
+typedef struct __queue {
+  struct __queue* next;
+  queue_entry entry;
+} Queue;
 
 void read_input(const char *path, int **A, int *N, int *M);
 
@@ -21,5 +29,11 @@ bool is_every_elem_one(int **A, int N, int M);
 bool is_every_elem_zero(int **A, int N, int M);
 
 void measure_fn_time(void *(fn)(int **, int, int), int **A, int N, int M);
+
+
+bool init_queue(Queue **q, int x, int y);
+bool clear_queue(Queue **q);
+bool pop(Queue **q);
+bool push(Queue **head, int x, int y);
 
 #endif
