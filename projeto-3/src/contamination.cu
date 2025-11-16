@@ -8,10 +8,43 @@
 #define ITERATION_END 404
 #define ITERATION_CONTINUE 101
 
+#define CURADA 1
+#define CONTAMINADA -1
+#define MORTA -2
+#define NINGUEM 0
+
+
 
 #define GET_STATE(R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
 
+void print_matrix(int **A, int N, int M) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            printf("%d ", A[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+
+__host__ void h_print_flat_matrix(int *A, int N, int M) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            printf("%d ", A[i * M + j]);
+        }
+        printf("\n");
+    }
+}
+
+__device__ void d_print_flat_matrix(int *A, int N, int M) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            printf("%d ", A[i * M + j]);
+        }
+        printf("\n");
+    }
+}
 
 void read_input(const char *path, int ***A, int *N, int *M) {
     FILE *fp = fopen(path, "r");
@@ -49,13 +82,17 @@ void read_input(const char *path, int ***A, int *N, int *M) {
             }
         }
     }
+
+    // printing the input matrix for verification
+    print_matrix(*A, *N, *M);
+
     fclose(fp);
 }
 
 int verify_end_population(int **A, int N, int M) {
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < M; j++) {
-            if (A[i][j] == -1 || A[i][j] == -2) {
+            if (A[i][j] == CONTAMINADA || A[i][j] == MORTA) {
                 return ITERATION_CONTINUE;
             }
         }
@@ -68,15 +105,14 @@ void write_output(const char *output_path, int **A, int N, int M) {
     long total_dead = 0; 
     long total_survivors = 0; 
     
-
+    // printing the final matrix for verification
+    print_matrix(A, N, M);
     
     for (int r = 0; r < N; r++) {
         for (int c = 0; c < M; c++) {
-            if (A[r][c] == 1) {
+            if (A[r][c] == CURADA || A[r][c] == CONTAMINADA) {
                 total_survivors++;
-            } else if (A[r][c] == -1) {
-                total_survivors++; 
-            } else if (A[r][c] == -2) {
+            } else if (A[r][c] == MORTA || A[r][c] == NINGUEM) {
                 total_dead++; 
             }
         }
@@ -110,6 +146,11 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, unsigned
     int total_elements = N * M;
     int index = threadIdx.x + blockIdx.x * blockDim.x;
 
+    // printf("Thread %d in Block %d computing index %d\n", threadIdx.x, blockIdx.x, index);
+
+    // printing the current state for debugging
+    // d_print_flat_matrix(A_current, N, M);
+
     if (index >= total_elements) return;
 
     int r = index / M; 
@@ -118,45 +159,47 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, unsigned
     int current_state = A_current[index];
     int next_state = current_state; 
 
-    if (current_state == 1) { 
+    if (current_state == CURADA) { 
         int neighbor_up    = GET_STATE(r - 1, c);
         int neighbor_down  = GET_STATE(r + 1, c);
         int neighbor_left  = GET_STATE(r, c - 1);
         int neighbor_right = GET_STATE(r, c + 1);
 
-        if (neighbor_up <= -1 || neighbor_down <= -1 ||
-            neighbor_left <= -1 || neighbor_right <= -1) {
+        if (neighbor_up < 0 || neighbor_down < 0 ||
+            neighbor_left < 0 || neighbor_right < 0) {
             
-            next_state = -1; 
+            next_state = CONTAMINADA; 
         }
     }
     else if (current_state == -1) {
         int x = simple_lcg_rand(index, seed);
 
-        if (x <= 999) { // 0.1 
-            next_state = 1; 
-        } else if (x <= 3999) { // 0.3
-            next_state = -1; 
-        } else { // 0.6 
-            next_state = -2; 
+        if (x <= 999) { // 0.1 para a pessoa se curar
+            next_state = CURADA; 
+        } else if (x <= 3999) { // 0.3 para continuar contaminada
+            next_state = CONTAMINADA; 
+        } else { // 0.6 para a pessoa morrer    
+            next_state = MORTA; 
         }
     }
-    else if (current_state == -2) { 
-        next_state = 0; 
+    else if (current_state == MORTA) { 
+        next_state = NINGUEM; 
     }
 
     A_next[index] = next_state;
+
+    //printf("print d_next after kernel execution:\n");
+    //d_print_flat_matrix(A_next, N, M);
 }
 
 
 int main(int argc, char **argv){
     
     srand(time(NULL)); 
-    if(argc < 5){
-        puts("Invalid Number of arguments: <file_path> <num_threads> <num_blocks> <device>");
+    if(argc < 4){
+        puts("Invalid Number of arguments: <file_path> <num_threads> <num_blocks>");
         return -1;
     }
-
 
     const char *file_path = argv[1];
     int num_threads = atoi(argv[2]);
@@ -193,15 +236,17 @@ int main(int argc, char **argv){
     }
     
     cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice);
-    
+    cudaMemcpy(d_next, d_current, size, cudaMemcpyDeviceToDevice);
+
     int i = 0;
     unsigned int seed;
     
     for(i = 0; i < max_iter; i++){
         seed = (unsigned int)rand(); 
         
-        execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, seed);
         
+        execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, seed);
+
         cudaError_t err = cudaGetLastError();
         if (err != cudaSuccess) {
             fprintf(stderr, "CUDA Kernel launch failed: %s\n", cudaGetErrorString(err));
@@ -210,10 +255,8 @@ int main(int argc, char **argv){
         }
 
         cudaDeviceSynchronize(); 
-        
 
         cudaMemcpy(h_next_flat, d_next, size, cudaMemcpyDeviceToHost);
-        
 
         for (int r = 0; r < N; r++) {
             for (int c = 0; c < M; c++) {
@@ -235,15 +278,12 @@ int main(int argc, char **argv){
         printf("Simulation ended after %d iterations (maximum limit reached).\n", max_iter);
     }
 
-
     write_output(output_file, space, N, M);
     
-
     for (int r = 0; r < N; r++) free(space[r]);
     free(space);
     free(h_current_flat);
     free(h_next_flat);
-
 
     cudaFree(d_current);
     cudaFree(d_next);
