@@ -1,0 +1,2 @@
+Total de Sobreviventes (Saudáveis ou Contaminados): 2
+Total de Pessoas Mortas na Matriz Final: 0
