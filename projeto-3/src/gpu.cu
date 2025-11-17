@@ -14,6 +14,7 @@
 #define MORTA -2
 #define NINGUEM 0
 
+enum { NS_PER_SECOND = 1000000000 };
 
 #define GET_STATE(R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
@@ -26,7 +27,6 @@ void print_matrix(int **A, int N, int M) {
         printf("\n");
     }
 }
-
 
 __host__ void h_print_flat_matrix(int *A, int N, int M) {
     for (int i = 0; i < N; i++) {
@@ -130,7 +130,7 @@ void write_output(const char *output_path, int **A, int N, int M, int total_dead
         return;
     }
 
-    fprintf(fp, "%d %d\n", total_dead, total_survivors);
+    fprintf(fp, "%d %ld\n", total_dead, total_survivors);
     
     fclose(fp);
     printf("Resultados escritos em: %s\n", output_path);
@@ -178,56 +178,9 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandSt
         }
     }
     else if(current_state == MORTA){
-            next_state = NINGUEM;
+    next_state = NINGUEM;
     }
     A_next[index] = next_state;
-}
-
-__global__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, curandState_t *states, int *total_dead) {
-    int total_elements = N * M;
-    
-    // Processa todos os elementos sequencialmente
-    for (int index = 0; index < total_elements; index++) {
-        int r = index / M; 
-        int c = index % M; 
-
-        int current_state = A_current[index];
-        int next_state = current_state; 
-
-        if (current_state == CURADA) { 
-            int neighbor_up    = GET_STATE(r - 1, c);
-            int neighbor_down  = GET_STATE(r + 1, c);
-            int neighbor_left  = GET_STATE(r, c - 1);
-            int neighbor_right = GET_STATE(r, c + 1);
-
-            if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
-                next_state = CONTAMINADA; 
-            }
-        }
-        else if (current_state == CONTAMINADA) {
-            int element_id = r * M + c;
-
-            curandState_t local = states[element_id];
-            unsigned int random_val = curand(&local);
-            states[element_id] = local;
-            
-            int x = random_val % 10000;
-            
-            if (x <= 999) { // 0.1 
-                next_state = CURADA; 
-            } else if (x <= 3999) { // 0.3
-                next_state = CONTAMINADA; 
-            } else { // 0.6 
-                next_state = MORTA;
-                // Incrementa o contador de mortos atomicamente (thread-safe)
-                atomicAdd(total_dead, 1);
-            }
-        }
-        else if(current_state == MORTA){
-            next_state = NINGUEM;
-        }
-        A_next[index] = next_state;
-    }
 }
 
 __global__ void setup_kernel(curandState_t *state, unsigned long seed, int N_total) {
@@ -236,9 +189,6 @@ __global__ void setup_kernel(curandState_t *state, unsigned long seed, int N_tot
         curand_init(seed, id, 0, &state[id]);
     }
 }
-
-
-enum { NS_PER_SECOND = 1000000000 };
 
 void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
   td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
@@ -264,7 +214,7 @@ int main(int argc, char **argv){
     const char *file_path = argv[1];
     int num_threads = atoi(argv[2]);
     int num_blocks = atoi(argv[3]);
-    // const char *device = argv[4]; 
+     
     const char *output_file = "gpu_output.txt"; 
 
     int **space, N, M; 
@@ -325,7 +275,6 @@ int main(int argc, char **argv){
     // Calcula o total de threads que serão lançadas
     int total_threads = num_blocks * num_threads;
     int total_elements = N * M;
-    int use_serial = 0; // Flag para indicar se usaremos versão serial
     
     // Verifica se a configuração é insuficiente
     if (total_threads < total_elements) {
@@ -333,21 +282,18 @@ int main(int argc, char **argv){
         printf("  Total de elementos: %d\n", total_elements);
         printf("  Total de threads: %d blocos × %d threads = %d threads\n", 
                num_blocks, num_threads, total_threads);
-        printf("  %d elementos NÃO seriam processados na versão paralela!\n", total_elements - total_threads);
-        printf("  Usando VERSÃO SERIAL (execute_iter_serial) para garantir corretude.\n");
-        printf("  AVISO: Isso será MUITO LENTO! Use mais threads para melhor desempenho.\n\n");
-        use_serial = 1;
+        printf("  %d elementos NÃO seriam processados!\n", total_elements - total_threads);
+        exit(1);
     } else {
         printf("Configuração: %d blocos × %d threads = %d threads (suficiente para %d elementos)\n",
                num_blocks, num_threads, total_threads, total_elements);
-        printf("Usando versão PARALELA (execute_iter) para melhor desempenho.\n\n");
     }
     
     // Usa num_blocks do usuário para setup_kernel
     setup_kernel<<<num_blocks, num_threads>>>(d_states, initial_seed, N*M);
+    cudaDeviceSynchronize(); 
 
     //init
-
     FILE *time_file;
     const char *file_name = "time_related/gpu_time.dat";
     time_file = fopen(file_name, "a");
@@ -356,28 +302,18 @@ int main(int argc, char **argv){
 
     for(i = 0; i < max_iter; i++){
         
-        // Escolhe a versão do kernel baseado na configuração
-        if (use_serial) {
-            // Versão serial: apenas 1 thread processa tudo sequencialmente
-            cudaDeviceSynchronize(); 
-            execute_iter_serial<<<1, 1>>>(d_current, d_next, N, M, d_states, d_total_dead);
-        } else {
-            // Versão paralela: usa a configuração passada pelo usuário
-            cudaDeviceSynchronize(); 
-            execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
-        }
+        execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
+        
         
         cudaError_t err = cudaGetLastError();
         if (err != cudaSuccess) {
             fprintf(stderr, "CUDA Kernel launch failed: %s\n", cudaGetErrorString(err));
-
             break; 
         }
-        //end
+        
         cudaDeviceSynchronize(); 
 
         cudaMemcpy(h_next_flat, d_next, size, cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
-        
 
         for (int r = 0; r < N; r++) {
             for (int c = 0; c < M; c++) {

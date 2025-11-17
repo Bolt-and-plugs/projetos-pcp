@@ -8,3 +8,6 @@ Time elapsed: 0.000079243 | Matrix Size:20 x 20
 Time elapsed: 0.000071432 | Matrix Size:20 x 20
 Time elapsed: 0.005428915 | Matrix Size:200 x 200
 Time elapsed: 0.747163039 | Matrix Size:2000 x 2000
+Time elapsed: 0.000140116 | Matrix Size:64 x 64
+Time elapsed: 0.002983851 | Matrix Size:256 x 256
+Time elapsed: 0.002857029 | Matrix Size:256 x 256

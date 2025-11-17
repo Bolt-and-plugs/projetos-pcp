@@ -9,3 +9,6 @@ Time elapsed: 0.294213960 | Matrix Size:2000 x 2000 | Threads: 1024 | Blocks 400
 Time elapsed: 0.348539217 | Matrix Size:2000 x 2000 | Threads: 1024 | Blocks 100000
 Time elapsed: 0.330424585 | Matrix Size:2000 x 2000 | Threads: 1024 | Blocks 10000
 Time elapsed: 0.304078736 | Matrix Size:2000 x 2000 | Threads: 1024 | Blocks 8000
+Time elapsed: 0.000405594 | Matrix Size:64 x 64 | Threads: 64 | Blocks 64
+Time elapsed: 0.005097897 | Matrix Size:256 x 256 | Threads: 256 | Blocks 256
+Time elapsed: 0.001603119 | Matrix Size:256 x 256 | Threads: 256 | Blocks 256

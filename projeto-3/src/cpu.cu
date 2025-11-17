@@ -218,18 +218,13 @@ int main(int argc, char **argv){
 
     memcpy(d_current, h_current_flat, size); //copiando o conteúdo para a GPU
 
-
-    
-    
-    int total_elements = N * M;
-
-    int i=0; 
-
     FILE *time_file;
     const char *file_name = "time_related/cpu_time.dat";
     time_file = fopen(file_name, "a");
     struct timespec start, end, _time;
     clock_gettime(CLOCK_MONOTONIC, &start);
+    
+    int i;
     for(i = 0; i < max_iter; i++){
         
         execute_iter_serial(d_current, d_next, N, M, &total_dead);
