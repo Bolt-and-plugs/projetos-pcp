@@ -84,7 +84,7 @@ void read_input(const char *path, int ***A, int *N, int *M) {
     }
 
     // printing the input matrix for verification
-    print_matrix(*A, *N, *M);
+    //print_matrix(*A, *N, *M);
 
     fclose(fp);
 }
@@ -107,7 +107,7 @@ void write_output(const char *output_path, int **A, int N, int M, int total_dead
     int total_deaths = 0;
     
     // printing the final matrix for verification
-    print_matrix(A, N, M);
+    //print_matrix(A, N, M);
     
     // Conta apenas sobreviventes (vivos curados ou contaminados)
     for (int r = 0; r < N; r++) {
@@ -129,18 +129,12 @@ void write_output(const char *output_path, int **A, int N, int M, int total_dead
         perror("Error opening output file");
         return;
     }
-    
 
-    
-    fprintf(fp, "Total de Sobreviventes (Saudáveis ou Contaminados): %ld\n", total_survivors);
-
-    fprintf(fp, "Total de Pessoas Mortas na Matriz Final: %d (mortes iniciais: %d | mortes durante iter: %d\n", total_deaths, total_deaths - total_dead, total_dead);
-
-    fprintf(fp, "Total de Casas Vazias (Ninguém): %ld\n", total_nobody);
+    fprintf(fp, "%d %d\n", total_dead, total_survivors);
     
     fclose(fp);
     printf("Resultados escritos em: %s\n", output_path);
-}
+}    
 
 __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandState_t *states, int *total_dead) {
     int total_elements = N * M;
@@ -183,7 +177,9 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandSt
             atomicAdd(total_dead, 1);
         }
     }
-
+    else if(current_state == MORTA){
+            next_state = NINGUEM;
+    }
     A_next[index] = next_state;
 }
 
@@ -227,7 +223,9 @@ __global__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, c
                 atomicAdd(total_dead, 1);
             }
         }
-
+        else if(current_state == MORTA){
+            next_state = NINGUEM;
+        }
         A_next[index] = next_state;
     }
 }
@@ -238,6 +236,22 @@ __global__ void setup_kernel(curandState_t *state, unsigned long seed, int N_tot
         curand_init(seed, id, 0, &state[id]);
     }
 }
+
+
+enum { NS_PER_SECOND = 1000000000 };
+
+void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
+  td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
+  td->tv_sec = t2.tv_sec - t1.tv_sec;
+  if (td->tv_sec > 0 && td->tv_nsec < 0) {
+    td->tv_nsec += NS_PER_SECOND;
+    td->tv_sec--;
+  } else if (td->tv_sec < 0 && td->tv_nsec > 0) {
+    td->tv_nsec -= NS_PER_SECOND;
+    td->tv_sec++;
+  }
+}
+
 
 int main(int argc, char **argv){
     
@@ -251,7 +265,7 @@ int main(int argc, char **argv){
     int num_threads = atoi(argv[2]);
     int num_blocks = atoi(argv[3]);
     // const char *device = argv[4]; 
-    const char *output_file = "simulation_output.txt"; 
+    const char *output_file = "gpu_output.txt"; 
 
     int **space, N, M; 
     read_input(file_path, &space, &N, &M);
@@ -262,6 +276,13 @@ int main(int argc, char **argv){
     int *h_next_flat = (int*)malloc(size); 
     int total_dead = 0;
     int *d_total_dead;
+
+    for(int i=0;i<N;i++){
+        for(int j=0;j<M;j++){
+            if(space[i][j]==MORTA) total_dead++;
+        }
+    }
+
     if (h_current_flat == NULL || h_next_flat == NULL) {
         fprintf(stderr, "Host memory allocation failed\n");
         return -1;
@@ -286,7 +307,7 @@ int main(int argc, char **argv){
     cudaMemcpy(d_next, d_current, size, cudaMemcpyDeviceToDevice);
 
 
-    cudaMemset(d_total_dead, 0, sizeof(int));
+    cudaMemcpy(d_total_dead, &total_dead, sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice); //copiando o conteúdo para a GPU
 
     curandState_t *d_states;
@@ -299,7 +320,7 @@ int main(int argc, char **argv){
     }   
 
     
-    unsigned long initial_seed = 42; 
+    unsigned long initial_seed = 0; 
     
     // Calcula o total de threads que serão lançadas
     int total_threads = num_blocks * num_threads;
@@ -325,14 +346,24 @@ int main(int argc, char **argv){
     // Usa num_blocks do usuário para setup_kernel
     setup_kernel<<<num_blocks, num_threads>>>(d_states, initial_seed, N*M);
 
+    //init
+
+    FILE *time_file;
+    const char *file_name = "time_related/gpu_time.dat";
+    time_file = fopen(file_name, "a");
+    struct timespec start, end, _time;
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
     for(i = 0; i < max_iter; i++){
         
         // Escolhe a versão do kernel baseado na configuração
         if (use_serial) {
             // Versão serial: apenas 1 thread processa tudo sequencialmente
+            cudaDeviceSynchronize(); 
             execute_iter_serial<<<1, 1>>>(d_current, d_next, N, M, d_states, d_total_dead);
         } else {
             // Versão paralela: usa a configuração passada pelo usuário
+            cudaDeviceSynchronize(); 
             execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
         }
         
@@ -342,7 +373,7 @@ int main(int argc, char **argv){
 
             break; 
         }
-
+        //end
         cudaDeviceSynchronize(); 
 
         cudaMemcpy(h_next_flat, d_next, size, cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
@@ -363,6 +394,14 @@ int main(int argc, char **argv){
         d_current = d_next;
         d_next = temp; 
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    sub_timespec(start, end, &_time);
+     
+    printf("Time elapsed: %d.%.9ld | Matrix Size: %d x %d | Threads: %d | Blocks %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, M, num_threads, num_blocks);
+    fprintf(time_file,"Time elapsed: %d.%.9ld | Matrix Size:%d x %d | Threads: %d | Blocks %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, M, num_threads, num_blocks);
+
+    fclose(time_file);
 
     if (i == max_iter) {
         printf("Simulation ended after %d iterations (maximum limit reached).\n", max_iter);

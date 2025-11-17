@@ -1,2 +1,0 @@
-Total de Sobreviventes (Saudáveis ou Contaminados): 0
-Total de Pessoas Mortas na Matriz Final: 32

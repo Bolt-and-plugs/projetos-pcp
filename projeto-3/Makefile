@@ -11,11 +11,11 @@ CFLAGS := -O3 -fopenmp
 INCLUDES := -I$(CUDA_PATH)/include
 LDFLAGS := -L$(CUDA_PATH)/lib64 -lcudart -lcurand -lm
 
-SRC_CU := src/contamination.cu
+SRC_CU := src/gpu.cu
 SRC_C := src/utils.c
 OBJ := $(patsubst %.cu,%.o,$(SRC_CU)) $(patsubst %.c,%.o,$(SRC_C))
 
-TARGET := contamination
+TARGET := gpu
 
 .PHONY: all clean
 
