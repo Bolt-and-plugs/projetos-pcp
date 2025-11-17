@@ -265,7 +265,7 @@ int main(int argc, char **argv){
     int num_threads = atoi(argv[2]);
     int num_blocks = atoi(argv[3]);
     // const char *device = argv[4]; 
-    const char *output_file = "gpu_output.txt"; 
+    const char *output_file = "outputs/gpu_output.txt"; 
 
     int **space, N, M; 
     read_input(file_path, &space, &N, &M);

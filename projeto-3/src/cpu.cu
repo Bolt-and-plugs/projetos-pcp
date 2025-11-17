@@ -178,7 +178,7 @@ int main(int argc, char **argv){
 
     const char *file_path = argv[1];
     // const char *device = argv[4]; 
-    const char *output_file = "cpu_output.txt"; 
+    const char *output_file = "outputs/cpu_output.txt"; 
 
     int **space, N, M; 
     read_input(file_path, &space, &N, &M);
