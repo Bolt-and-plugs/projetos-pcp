@@ -226,7 +226,6 @@ int main(int argc, char **argv){
     int *h_next_flat = (int*)malloc(size); 
     int total_dead = 0;
     int *d_total_dead;
-
     for(int i=0;i<N;i++){
         for(int j=0;j<M;j++){
             if(space[i][j]==MORTA) total_dead++;
