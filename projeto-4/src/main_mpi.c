@@ -4,12 +4,28 @@
 char input_path[BUFF_SIZE], output_path[BUFF_SIZE];
 int block_x, block_y, num_cli;
 
-void *mpi_worker(int **A, int N, int M) {
-  // root
-  if (is_every_elem_one(A, N, M) || is_every_elem_zero(A, N, M)) {
-    // stop
-  }
+void *mpi_worker(int **A, int N, int M, int rank) {
+  while(true) {
+    if (is_every_elem_one(A, N, M) || is_every_elem_zero(A, N, M)) {
+      break;
+    }
 
+    // logica 
+    for (int i = 0; i < num_cli; i++) {
+      for (int j = 0; j < num_cli; j++) {
+        int start_x = i * block_x;
+        int start_y = j * block_y;
+
+
+
+      }
+    }
+
+
+    // barreira de sincronismo
+    MPI_Barrier(MPI_COMM_WORLD);
+
+  }
   return NULL;
 }
 
@@ -90,10 +106,7 @@ int main(int argc, char **argv) {
   // logic
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  printf("MPI module initialized.\n");
-
-  measure_fn_time(mpi_worker, A, N, M);
-
+  measure_fn_mpi_time(mpi_worker, A, N, M, rank);
   MPI_Finalize();
 
   // output

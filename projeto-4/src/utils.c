@@ -148,7 +148,22 @@ void measure_fn_time(void *(fn)(int **, int, int), int **A, int N,
   fn(A, N, M);
   clock_gettime(CLOCK_MONOTONIC, &end);
   sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
+  fclose(file);
+}
+
+void measure_fn_mpi_time(void *(fn)(int **, int, int, int), int **A, int N,
+                     int M, int rank) {
+  FILE *file;
+  const char *file_name = "assets/output/mpi_time_measure.txt";
+  struct timespec start, end, _time;
+
+  puts("Initializing mpi execution");
+  file = fopen(file_name, "a");
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  fn(A, N, M, rank);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  sub_timespec(start, end, &_time);
   fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
   fclose(file);
 }

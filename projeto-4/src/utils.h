@@ -30,6 +30,8 @@ bool is_every_elem_zero(int **A, int N, int M);
 
 void measure_fn_time(void *(fn)(int **, int, int), int **A, int N, int M);
 
+void measure_fn_mpi_time(void *(fn)(int **, int, int, int), int **A, int N, int M, int rank);
+
 
 bool init_queue(Queue **q, int x, int y);
 bool clear_queue(Queue **q);
