@@ -2,6 +2,7 @@
 
 char input_path[BUFF_SIZE], output_path[BUFF_SIZE];
 int block_x, block_y, num_cli;
+int **buff_write;
 Queue *head;
 int *it;
 int g_iteration = 0;
@@ -31,17 +32,24 @@ static bool is_every_elem_zero(int **A, int N, int M) {
 void mpi_process_block(int **A, int N, int M, int rank, int start_x,
                        int start_y, int block_x, int block_y) {
   int rand_int;
+  while(it[rank] != g_iteration)
+    ;
+
   for (int i = start_x; i < start_x + block_x && i < N; i++) {
     for (int j = start_y; j < start_y + block_y && j < M; j++) {
-      while(it[rank] != g_iteration)
-        ; // busy wait
-
-      it[rank]++;
-      if (rank == 0) {
-        g_iteration++;
-      }
+      
       if (A[i][j] == empty)
         continue;
+
+      if (A[i][j] == dead) {
+        buff_write[i][j] = dead_twice;
+        continue;
+      }
+
+      if (A[i][j] == dead_twice) {
+        buff_write[i][j] = empty;
+        continue;
+      }
 
       srand(time(NULL));
       rand_int = rand() % 10000;
@@ -50,32 +58,47 @@ void mpi_process_block(int **A, int N, int M, int rank, int start_x,
           (i > 0 && A[i - 1][j] == infected) ||
           (i < N - 1 && A[i + 1][j] == infected) ||
           (j > 0 && A[i][j - 1] == infected) ||
-          (j < M - 1 && A[i][j + 1] == infected) || 
+          (j < M - 1 && A[i][j + 1] == infected)
+      );
+
+      bool has_dead_nearby = (
           (i > 0 && A[i - 1][j] == dead) ||
           (i < N - 1 && A[i + 1][j] == dead) ||
           (j > 0 && A[i][j - 1] == dead) ||
-          (j < M - 1 && A[i][j + 1] == dead) 
+          (j < M - 1 && A[i][j + 1] == dead)
       );
 
-      if (A[i][j] == healthy && has_infetected_nearby) { 
-        A[i][j] = infected;
+      if (A[i][j] == healthy && (has_infetected_nearby || has_dead_nearby)) {
+        buff_write[i][j] = infected;
         continue;
       }
 
       if (rand_int - 999 <= 0) {
-        A[i][j] = healthy;
+        buff_write[i][j] = healthy;
       } else if (rand_int >= 4000) {
-        A[i][j] = infected;
+        buff_write[i][j] = dead;
       } else {
-        A[i][j] = dead;
+        buff_write[i][j] = infected;
       }
     }
+  }
+
+  for (int i = start_x; i < start_x + block_x && i < N; i++) {
+    for (int j = start_y; j < start_y + block_y && j < M; j++) {
+      A[i][j] = buff_write[i][j];
+    }
+  }
+
+  it[rank]++;
+  if (rank == 0) {
+    g_iteration++;
   }
 }
 
 void *mpi_worker(int **A, int N, int M, int rank) {
+  int limit = N * M;
   while(true) {
-    if (is_every_elem_one(A, N, M) || is_every_elem_zero(A, N, M)) {
+    if (is_every_elem_one(A, N, M) || is_every_elem_zero(A, N, M) || g_iteration >= limit) {
       break;
     }
 
@@ -159,6 +182,12 @@ int main(int argc, char **argv) {
 
   // input
   read_input(input_path, A, &N, &M);
+
+  // init buff_write 
+  buff_write = malloc(sizeof(int *) * N);
+  for (int i = 0; i < N; i++) {
+    buff_write[i] = malloc(sizeof(int) * M);
+  }
 
   for (int i = 0; i < num_cli; i++)
     for (int j = 0; j < num_cli; j++)
