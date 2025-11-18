@@ -16,8 +16,8 @@
 
 enum { NS_PER_SECOND = 1000000000 };
 
-#define GET_STATE(R, C) \
-    (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
+#define GET_STATE(A_current_ptr, R, C) \
+    (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current_ptr[(R) * M + (C)] : 0)
 
 void print_matrix(int **A, int N, int M) {
     for (int i = 0; i < N; i++) {
@@ -88,19 +88,23 @@ void read_input(const char *path, int ***A, int *N, int *M) {
 
     fclose(fp);
 }
+__global__ void verify_end_kernel(int *d_current, int N, int M, int *d_end_condition) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total_elements = N * M;
 
-int verify_end_population(int **A, int N, int M) {
-    for(int i = 0; i < N; i++) {
-        for(int j = 0; j < M; j++) {
-            if (A[i][j] == CONTAMINADA || A[i][j] == MORTA) {
-                return ITERATION_CONTINUE;
-            }
+    if (idx < total_elements) {
+        // Se a condição de CONTINUAR já foi sinalizada por outra thread, pare.
+        if (*d_end_condition == ITERATION_CONTINUE) {
+            return;
+        }
+
+        // Verifica a condição que REQUER CONTINUIDADE: presença de CONTAMINADA
+        if (d_current[idx] == CONTAMINADA) {
+            // Sinaliza que a iteração DEVE CONTINUAR
+            atomicExch(d_end_condition, ITERATION_CONTINUE);
         }
     }
-    return ITERATION_END;
 }
-
-
 void write_output(const char *output_path, int **A, int N, int M, int total_dead) {
     long total_survivors = 0; 
     long total_nobody = 0;
@@ -149,11 +153,10 @@ __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandSt
     int next_state = current_state; 
 
     if (current_state == CURADA) { 
-        int neighbor_up    = GET_STATE(r - 1, c);
-        int neighbor_down  = GET_STATE(r + 1, c);
-        int neighbor_left  = GET_STATE(r, c - 1);
-        int neighbor_right = GET_STATE(r, c + 1);
-
+        int neighbor_up    = GET_STATE(A_current, r - 1, c);
+        int neighbor_down  = GET_STATE(A_current, r + 1, c);
+        int neighbor_left  = GET_STATE(A_current, r, c - 1);
+        int neighbor_right = GET_STATE(A_current, r, c + 1);
         if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
             next_state = CONTAMINADA; 
         }
@@ -245,7 +248,11 @@ int main(int argc, char **argv){
 
     int *d_current = NULL; 
     int *d_next = NULL;    
-
+    int *d_end_condition;
+    if (cudaMalloc((void **)&d_end_condition, sizeof(int)) != cudaSuccess) {
+        printf("Error at allocating end condition memory on GPU\n");
+        return -1;
+}
     if (cudaMalloc((void **)&d_current, size) != cudaSuccess || 
         cudaMalloc((void **)&d_next, size) != cudaSuccess || cudaMalloc((void **)&d_total_dead, (int)sizeof(int))!= cudaSuccess) {
         printf("Error at allocating memory on GPU\n");
@@ -282,7 +289,6 @@ int main(int argc, char **argv){
         printf("  Total de threads: %d blocos × %d threads = %d threads\n", 
                num_blocks, num_threads, total_threads);
         printf("  %d elementos NÃO seriam processados!\n", total_elements - total_threads);
-        exit(1);
     } else {
         printf("Configuração: %d blocos × %d threads = %d threads (suficiente para %d elementos)\n",
                num_blocks, num_threads, total_threads, total_elements);
@@ -298,29 +304,26 @@ int main(int argc, char **argv){
     time_file = fopen(file_name, "a");
     struct timespec start, end, _time;
     clock_gettime(CLOCK_MONOTONIC, &start);
-
+    int h_end_condition;
     for(i = 0; i < max_iter; i++){
         
         execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
         
-        
+        h_end_condition = ITERATION_END; // 0
+        cudaMemcpy(d_end_condition, &h_end_condition, sizeof(int), cudaMemcpyHostToDevice);
         cudaError_t err = cudaGetLastError();
         if (err != cudaSuccess) {
             fprintf(stderr, "CUDA Kernel launch failed: %s\n", cudaGetErrorString(err));
             break; 
         }
-        
+        verify_end_kernel<<<num_blocks, num_threads>>>(d_next, N, M, d_end_condition);
         cudaDeviceSynchronize(); 
 
-        cudaMemcpy(h_next_flat, d_next, size, cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
 
-        for (int r = 0; r < N; r++) {
-            for (int c = 0; c < M; c++) {
-                space[r][c] = h_next_flat[r * M + c];
-            }
-        }
-        
-        if(verify_end_population(space, N, M) == ITERATION_END) { //verificação se acabou ou não as iterações
+        cudaMemcpy(&h_end_condition, d_end_condition, sizeof(int), cudaMemcpyDeviceToHost);
+
+        // 5. Verifica a condição de parada no Host
+        if(h_end_condition == ITERATION_END) { 
             printf("Simulation ended after %d iterations due to population stability.\n", i + 1);
             break; 
         }
@@ -337,7 +340,13 @@ int main(int argc, char **argv){
     fprintf(time_file,"Time elapsed: %d.%.9ld | Matrix Size:%d x %d | Threads: %d | Blocks %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, M, num_threads, num_blocks);
 
     fclose(time_file);
+    cudaMemcpy(h_next_flat, d_current, size, cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
 
+    for (int r = 0; r < N; r++) {
+        for (int c = 0; c < M; c++) {
+            space[r][c] = h_next_flat[r * M + c];
+        }
+    }
     if (i == max_iter) {
         printf("Simulation ended after %d iterations (maximum limit reached).\n", max_iter);
     }
