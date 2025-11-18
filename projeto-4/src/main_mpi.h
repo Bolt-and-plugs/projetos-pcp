@@ -4,6 +4,8 @@
 #include "defines.h"
 #include "utils.h"
 #include "mpi.h"
+#include "time.h"
+#include "stdlib.h"
 
 typedef enum _status { dead = -2, infected = -1, empty = 0, healthy = 1 } status;
 
