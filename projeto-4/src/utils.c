@@ -36,6 +36,12 @@ bool read_input(const char *path, int **A, int *N, int *M) {
     return false;
   }
 
+  if (!*A || !A) {
+    fprintf(stderr, "Matrix A not initialized\n");
+    fclose(fp);
+    return false;
+  }
+
   for (int i = 0; i < *N; i++) {
     for (int j = 0; j < *M; j++) {
       if (fscanf(fp, "%d", &A[i][j]) != 1) {

@@ -83,11 +83,9 @@ void mpi_process_block(int **A, int N, int M, int rank, int start_x,
     }
   }
 
-  for (int i = start_x; i < start_x + block_x && i < N; i++) {
-    for (int j = start_y; j < start_y + block_y && j < M; j++) {
+  for (int i = start_x; i < start_x + block_x && i < N; i++)
+    for (int j = start_y; j < start_y + block_y && j < M; j++)
       A[i][j] = buff_write[i][j];
-    }
-  }
 
   it[rank]++;
   if (rank == 0) {
@@ -178,6 +176,12 @@ int main(int argc, char **argv) {
 
   if (!init_queue(&head, 0, block_x * block_y * sizeof(int))) {
     return 0;
+  }
+  
+  // Allocate matrix A
+  A = malloc(sizeof(int *) * N);
+  for (int i = 0; i < N; i++) {
+    A[i] = malloc(sizeof(int) * M);
   }
 
   // input
