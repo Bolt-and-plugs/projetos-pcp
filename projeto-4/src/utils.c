@@ -1,8 +1,11 @@
 #include "utils.h"
 
+sem_t mutex;
+bool initilized = false;
+
 enum { NS_PER_SECOND = 1000000000 };
 
-void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
+static void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
   td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
   td->tv_sec = t2.tv_sec - t1.tv_sec;
   if (td->tv_sec > 0 && td->tv_nsec < 0) {
@@ -14,39 +17,29 @@ void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
   }
 }
 
-static void write_x_to_file(long double *x, int N, bool omp) {
-  char buffer[256];
-  if (omp)
-    sprintf(buffer, "outputs/omp-mat-%d-%d.dat", N, N);
-  else
-    sprintf(buffer, "outputs/seq-mat-%d-%d.dat", N, N);
-  FILE *fp = fopen(buffer, "w");
+bool read_input(const char *path, int **A, int *N, int *M) {
+  assert(path != NULL && strlen(path) > 0);
 
-  if (!fp) {
-    printf("Arquivo mal formado %s\n", buffer);
-    return;
-  }
-
-  for (int i = 0; i < N; i++)
-    fprintf(fp, "[%.4Lf]\t", x[i]);
-
-  fclose(fp);
-}
-
-void read_input(const char *path, int **A, int *N, int *M) {
   FILE *fp = fopen(path, "r");
   bool ex = false;
   int i = 0, j = 0;
 
   if (fp == NULL) {
     perror("Error opening file");
-    exit(EXIT_FAILURE);
+    fclose(fp);
+    return false;
   }
 
   if (fscanf(fp, "%d %d\n", N, M) != 2) {
     fprintf(stderr, "Error reading N and M at [%d][%d]\n", i, j);
     fclose(fp);
-    exit(EXIT_FAILURE);
+    return false;
+  }
+
+  if (!*A || !A) {
+    fprintf(stderr, "Matrix A not initialized\n");
+    fclose(fp);
+    return false;
   }
 
   for (int i = 0; i < *N; i++) {
@@ -54,10 +47,12 @@ void read_input(const char *path, int **A, int *N, int *M) {
       if (fscanf(fp, "%d", &A[i][j]) != 1) {
         fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
         fclose(fp);
-        exit(EXIT_FAILURE);
+        return false;
       }
     }
   }
+
+  return true;
 }
 
 bool write_file(const char *path, int **A, int N, int M) {
@@ -104,27 +99,7 @@ void print_arr(long double *x, int N) {
   puts("");
 }
 
-bool is_every_elem_one(int **A, int N, int M) {
-  if (!A)
-    return false;
 
-  for (int i = 0; i < N; i++)
-    for (int j = 0; j < M; j++)
-      if (A[i][j] != 1) return false;
-
-  return true;
-}
-
-bool is_every_elem_zero(int **A, int N, int M) {
-  if (!A)
-    return false;
-
-  for (int i = 0; i < N; i++)
-    for (int j = 0; j < M; j++)
-      if (A[i][j] != 0) return false;
-
-  return true;
-}
 
 void print_mat(long double **x, int N, int M) {
   for (int i = 0; i < N; i++) {
@@ -148,7 +123,22 @@ void measure_fn_time(void *(fn)(int **, int, int), int **A, int N,
   fn(A, N, M);
   clock_gettime(CLOCK_MONOTONIC, &end);
   sub_timespec(start, end, &_time);
-  printf("Time elapsed: %d.%.9ld | Matrix Size: %d\n ", (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
+  fclose(file);
+}
+
+void measure_fn_mpi_time(void *(fn)(int **, int, int, int), int **A, int N,
+                     int M, int rank) {
+  FILE *file;
+  const char *file_name = "assets/output/mpi_time_measure.txt";
+  struct timespec start, end, _time;
+
+  puts("Initializing mpi execution");
+  file = fopen(file_name, "a");
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  fn(A, N, M, rank);
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  sub_timespec(start, end, &_time);
   fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
   fclose(file);
 }
@@ -165,6 +155,11 @@ bool init_queue(Queue **q, int x, int y) {
   (*q)->entry.bound_x = x;
   (*q)->entry.bound_y = y;
   (*q)->next = NULL;
+
+  if (!initilized) {
+    sem_init(&mutex, 0, 1);
+    initilized = true;
+  }
   return true;
 }
 bool clear_queue(Queue **q) {
@@ -181,9 +176,13 @@ bool clear_queue(Queue **q) {
   return true;
 }
 bool pop(Queue **q) {
+  assert(q != NULL);
+
+  sem_wait(&mutex);
   if (*q && !(*q)->next) {
     free(*q);
     *q = NULL;
+    sem_post(&mutex);
     return true;
   }
 
@@ -192,27 +191,25 @@ bool pop(Queue **q) {
     l = *q;
     *q = (*q)->next;
     free(l);
+    sem_post(&mutex);
     return true;
   }
 
   fprintf(stderr, "Queue is already empty");
+  sem_post(&mutex);
   return false;
 }
 
 bool push(Queue **head, int x, int y) {
-  if (!*head) {
-    if(!init_queue(head, 0, 0)) {
-      fprintf(stderr, "Could not push to queue: queue head not initialized");
-      return false;
-    }
-    return true;
-  }
+  assert(head != NULL);
 
+  sem_wait(&mutex);
   Queue *q = NULL;
   Queue *l = *head;
 
   if(!init_queue(&q, x, y)) {
     fprintf(stderr, "Could not push to queue: new node not initialized");
+    sem_post(&mutex);
     return false;
   }
 
@@ -220,6 +217,7 @@ bool push(Queue **head, int x, int y) {
     l = l->next;
   }
   l->next = q;
+  sem_post(&mutex);
   return true;
 }
 

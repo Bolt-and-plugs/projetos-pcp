@@ -4,10 +4,10 @@ title: Logica de propagação sequencial
 status: To Do
 assignee: []
 created_date: '2025-11-09 13:08'
-updated_date: '2025-11-16 13:34'
+updated_date: '2025-11-18 19:11'
 labels: []
 dependencies: []
-ordinal: 1500
+ordinal: 3000
 ---
 
 
