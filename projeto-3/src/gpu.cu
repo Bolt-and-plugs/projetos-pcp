@@ -1,243 +1,124 @@
 #include <stdio.h>
 #include <cuda_runtime.h>
 #include <stdlib.h>
-#include <time.h>
 #include <curand.h>        
 #include <curand_kernel.h> 
 #include "utils.h" 
-
-#define ITERATION_END 404
-#define ITERATION_CONTINUE 101
-
-#define CURADA 1
-#define CONTAMINADA -1
-#define MORTA -2
-#define NINGUEM 0
 
 enum { NS_PER_SECOND = 1000000000 };
 
 #define GET_STATE(A_current_ptr, R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current_ptr[(R) * M + (C)] : 0)
 
-void print_matrix(int **A, int N, int M) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < M; j++) {
-            printf("%d ", A[i][j]);
-        }
-        printf("\n");
-    }
-}
-
-__host__ void h_print_flat_matrix(int *A, int N, int M) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < M; j++) {
-            printf("%d ", A[i * M + j]);
-        }
-        printf("\n");
-    }
-}
-
-__device__ void d_print_flat_matrix(int *A, int N, int M) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < M; j++) {
-            printf("%d ", A[i * M + j]);
-        }
-        printf("\n");
-    }
-}
-
-void read_input(const char *path, int ***A, int *N, int *M) {
-    FILE *fp = fopen(path, "r");
-
-
-    if (fp == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-    if (fscanf(fp, "%d %d", N, M) != 2) {
-        fprintf(stderr, "Error reading N, M\n");
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    *A = (int**)malloc(sizeof(int*) * (*N));
-    for (int i = 0; i < *N; i++) {
-        (*A)[i] = (int*)malloc(sizeof(int) * (*M));
-        if ((*A)[i] == NULL) {
-            perror("Could not allocate A row");
-            // free previously allocated rows
-            for (int j = 0; j < i; j++) {
-                free((*A)[j]);
-            }
-            free((*A));
-            exit(1);
-        }
-    }
-
-    for (int i = 0; i < *N; i++) {
-        for (int j = 0; j < *M; j++) {
-            if (fscanf(fp, "%d", &(*A)[i][j]) != 1) {
-                fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
-                fclose(fp);
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-
-    // printing the input matrix for verification
-    //print_matrix(*A, *N, *M);
-
-    fclose(fp);
-}
 __global__ void verify_end_kernel(int *d_current, int N, int M, int *d_end_condition) {
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int total_elements = N * M;
+    int stride = blockDim.x * gridDim.x;
 
-    if (idx < total_elements) {
+    for (int i = idx; i < N * M; i += stride) {
         // Se a condição de CONTINUAR já foi sinalizada por outra thread, pare.
         if (*d_end_condition == ITERATION_CONTINUE) {
             return;
         }
 
-        // Verifica a condição que REQUER CONTINUIDADE: presença de CONTAMINADA
-        if (d_current[idx] == CONTAMINADA) {
+        // Verifica a condição que REQUER CONTINUIDADE: presença de INFECTED
+        if (d_current[i] == INFECTED) {
             // Sinaliza que a iteração DEVE CONTINUAR
             atomicExch(d_end_condition, ITERATION_CONTINUE);
+            return; // Otimização: se achou um, não precisa verificar o resto desta thread
         }
     }
-}
-void write_output(const char *output_path, int **A, int N, int M, int total_dead) {
-    long total_survivors = 0; 
-    long total_nobody = 0;
-    int total_deaths = 0;
-    
-    // printing the final matrix for verification
-    //print_matrix(A, N, M);
-    
-    // Conta apenas sobreviventes (vivos curados ou contaminados)
-    for (int r = 0; r < N; r++) {
-        for (int c = 0; c < M; c++) {
-            if (A[r][c] == CURADA || A[r][c] == CONTAMINADA) {
-                total_survivors++;
-            }
-            else if (A[r][c] == NINGUEM) {
-                total_nobody++;
-            }
-            else {
-                total_deaths++;
-            }
-        }
-    }
-
-    FILE *fp = fopen(output_path, "w");
-    if (fp == NULL) {
-        perror("Error opening output file");
-        return;
-    }
-
-    fprintf(fp, "%d %ld\n", total_dead, total_survivors);
-    
-    fclose(fp);
-    printf("Resultados escritos em: %s\n", output_path);
 }    
 
 __global__ void execute_iter(int *A_current, int *A_next, int N, int M, curandState_t *states, int *total_dead) {
-    int total_elements = N * M;
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    
-    if (index >= total_elements) return;
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
 
-    int r = index / M; 
-    int c = index % M; 
+    for (int index = idx; index < N * M; index += stride) {
+        int r = index / M;
+        int c = index % M;
 
-    int current_state = A_current[index];
-    int next_state = current_state; 
+        int current_state = A_current[index];
+        int next_state = current_state; 
 
-    if (current_state == CURADA) { 
-        int neighbor_up    = GET_STATE(A_current, r - 1, c);
-        int neighbor_down  = GET_STATE(A_current, r + 1, c);
-        int neighbor_left  = GET_STATE(A_current, r, c - 1);
-        int neighbor_right = GET_STATE(A_current, r, c + 1);
-        if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
-            next_state = CONTAMINADA; 
+        if (current_state == HEALTHY) { 
+            int neighbor_up    = GET_STATE(A_current, r - 1, c);
+            int neighbor_down  = GET_STATE(A_current, r + 1, c);
+            int neighbor_left  = GET_STATE(A_current, r, c - 1);
+            int neighbor_right = GET_STATE(A_current, r, c + 1);
+            if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
+                next_state = INFECTED; 
+            }
         }
-    }
-    else if (current_state == CONTAMINADA) {
-        int element_id = r * M + c;
-
-        curandState_t local = states[element_id];
-        unsigned int random_val = curand(&local);
-        states[element_id] = local;
-        
-        int x = random_val % 10000;
-        
-        if (x <= 999) { // 0.1 
-            next_state = CURADA; 
-        } else if (x <= 3999) { // 0.3
-            next_state = CONTAMINADA; 
-        } else { // 0.6 
-            next_state = MORTA;
-            // Incrementa o contador de mortos atomicamente (thread-safe)
-            atomicAdd(total_dead, 1);
+        else if (current_state == INFECTED) {
+            // Usa o estado do gerador correspondente à célula
+            curandState_t local = states[index];
+            unsigned int random_val = curand(&local);
+            states[index] = local; // Atualiza o estado na memória global
+            
+            int x = random_val % 10000;
+            
+            if (x <= 999) { // 0.1 
+                next_state = HEALTHY; 
+            } else if (x <= 3999) { // 0.3
+                next_state = INFECTED; 
+            } else { // 0.6 
+                next_state = DEAD;
+                // Incrementa o contador de mortos atomicamente (thread-safe)
+                atomicAdd(total_dead, 1);
+            }
         }
+        else if(current_state == DEAD){
+            next_state = EMPTY;
+        }
+        A_next[index] = next_state;
     }
-    else if(current_state == MORTA){
-    next_state = NINGUEM;
-    }
-    A_next[index] = next_state;
 }
 
-__global__ void setup_kernel(curandState_t *state, unsigned long seed, int N_total) {
-    int id = threadIdx.x + blockIdx.x * blockDim.x;
-    if (id < N_total) {
+__global__ void setup_kernel(curandState_t *state, unsigned long seed, int N, int M) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int stride = blockDim.x * gridDim.x;
+
+    for (int id = idx; id < N * M; id += stride) {
         curand_init(seed, id, 0, &state[id]);
     }
 }
 
-void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
-  td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
-  td->tv_sec = t2.tv_sec - t1.tv_sec;
-  if (td->tv_sec > 0 && td->tv_nsec < 0) {
-    td->tv_nsec += NS_PER_SECOND;
-    td->tv_sec--;
-  } else if (td->tv_sec < 0 && td->tv_nsec > 0) {
-    td->tv_nsec -= NS_PER_SECOND;
-    td->tv_sec++;
-  }
-}
-
-
 int main(int argc, char **argv){
     
     srand(time(NULL)); 
+    
     if(argc < 4){
-        puts("Invalid Number of arguments: <file_path> <num_threads> <num_blocks>");
+        puts("Usage: ./gpu <file_path> <num_threads> <num_blocks>");
         return -1;
     }
 
     const char *file_path = argv[1];
     int num_threads = atoi(argv[2]);
     int num_blocks = atoi(argv[3]);
-    // const char *device = argv[4]; 
     const char *output_file = "outputs/gpu_output.txt"; 
 
     int **space, N, M; 
     read_input(file_path, &space, &N, &M);
+
     int max_iter = N*M;
     int size = N*M*sizeof(int);
 
-    int *h_current_flat = (int*)malloc(size); //matriz interpretada como vetor
-    int *h_next_flat = (int*)malloc(size); 
-    int total_dead = 0;
-    int *d_total_dead;
-    for(int i=0;i<N;i++){
-        for(int j=0;j<M;j++){
-            if(space[i][j]==MORTA) total_dead++;
-        }
-    }
-
+    int *h_current_flat = (int*)malloc(size); // host current matrix as flat array
+    int *h_next_flat = (int*)malloc(size); // host next matrix as flat array
+    
     if (h_current_flat == NULL || h_next_flat == NULL) {
         fprintf(stderr, "Host memory allocation failed\n");
         return -1;
+    }
+    
+    int total_dead = 0;
+    int *d_total_dead;
+
+    // conta total de mortos iniciais
+    for(int i=0;i<N;i++){
+        for(int j=0;j<M;j++){
+            if(space[i][j]==DEAD) total_dead++;
+        }
     }
 
     for (int r = 0; r < N; r++) {
@@ -249,21 +130,23 @@ int main(int argc, char **argv){
     int *d_current = NULL; 
     int *d_next = NULL;    
     int *d_end_condition;
+
     if (cudaMalloc((void **)&d_end_condition, sizeof(int)) != cudaSuccess) {
         printf("Error at allocating end condition memory on GPU\n");
         return -1;
-}
+    }
+
     if (cudaMalloc((void **)&d_current, size) != cudaSuccess || 
-        cudaMalloc((void **)&d_next, size) != cudaSuccess || cudaMalloc((void **)&d_total_dead, (int)sizeof(int))!= cudaSuccess) {
+        cudaMalloc((void **)&d_next, size) != cudaSuccess || 
+        cudaMalloc((void **)&d_total_dead, (int) sizeof(int))!= cudaSuccess) {
         printf("Error at allocating memory on GPU\n");
         return -1;
     }
     
-    cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice);
-    cudaMemcpy(d_next, d_current, size, cudaMemcpyDeviceToDevice);
+    cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice); // copia matriz inicial para a GPU
+    cudaMemcpy(d_next, d_current, size, cudaMemcpyDeviceToDevice); // copia current para next na GPU
 
-
-    cudaMemcpy(d_total_dead, &total_dead, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_total_dead, &total_dead, sizeof(int), cudaMemcpyHostToDevice); // copia total_dead inicial para a GPU
     cudaMemcpy(d_current, h_current_flat, size, cudaMemcpyHostToDevice); //copiando o conteúdo para a GPU
 
     curandState_t *d_states;
@@ -274,40 +157,71 @@ int main(int argc, char **argv){
         printf("Error at allocating cuRAND states on GPU\n");
         return -1;
     }   
-
     
     unsigned long initial_seed = 0; 
     
-    // Calcula o total de threads que serão lançadas
-    int total_threads = num_blocks * num_threads;
+    dim3 threadsPerBlock;
+    dim3 numBlocksGrid;
     int total_elements = N * M;
+
+    // ============ MODO MANUAL (1D) ============
     
-    // Verifica se a configuração é insuficiente
-    if (total_threads < total_elements) {
-        printf("AVISO: Configuração insuficiente!\n");
-        printf("  Total de elementos: %d\n", total_elements);
-        printf("  Total de threads: %d blocos × %d threads = %d threads\n", 
-               num_blocks, num_threads, total_threads);
-        printf("  %d elementos NÃO seriam processados!\n", total_elements - total_threads);
+    // Lógica para interpretar casos como "1024 16" significando 1024 threads totais em 16 blocos
+    // (ou seja, 64 threads por bloco), ao invés de 1024 threads POR bloco.
+    
+    int threads_arg = num_threads;
+    int blocks_arg = num_blocks;
+    
+    // Se threads_arg > 1024 (limite de hardware por bloco) OU
+    // se threads_arg é divisível por blocks_arg e o resultado é um tamanho de bloco válido...
+    // Vamos assumir a interpretação "Total de Threads" vs "Blocos"
+    
+    if (threads_arg * blocks_arg != N * M && (threads_arg > 1024 || (threads_arg % blocks_arg == 0 && threads_arg / blocks_arg <= 1024 && threads_arg / blocks_arg > 0))) {
+            // Interpretação: threads_arg é o TOTAL de threads
+            int t_per_b = threads_arg / blocks_arg;
+            if (t_per_b == 0) t_per_b = 1; // segurança
+            
+            threadsPerBlock = dim3(t_per_b);
+            numBlocksGrid = dim3(blocks_arg);
+            
+            printf("========================================\n");
+            printf("MODO 1D MANUAL (Interpretado: Total Threads / Blocos)\n");
+            printf("  Argumentos: %d threads totais, %d blocos\n", threads_arg, blocks_arg);
+            printf("  Configuração Real: %d threads/bloco × %d blocos\n", t_per_b, blocks_arg);
     } else {
-        printf("Configuração: %d blocos × %d threads = %d threads (suficiente para %d elementos)\n",
-               num_blocks, num_threads, total_threads, total_elements);
+            // Interpretação Padrão: threads_arg é threads POR bloco
+            threadsPerBlock = dim3(threads_arg);
+            numBlocksGrid = dim3(blocks_arg);
+            
+            printf("========================================\n");
+            printf("MODO 1D MANUAL (Interpretado: Threads por Bloco × Blocos)\n");
+            printf("  Configuração: %d threads/bloco × %d blocos\n", threads_arg, blocks_arg);
     }
+
+    int total_threads_configured = threadsPerBlock.x * numBlocksGrid.x;
+    printf("  Matriz: %d × %d = %d elementos\n", N, M, total_elements);
+    printf("  Total de Threads na Grid: %d\n", total_threads_configured);
     
-    // Usa num_blocks do usuário para setup_kernel
-    setup_kernel<<<num_blocks, num_threads>>>(d_states, initial_seed, N*M);
+    if (total_threads_configured < total_elements) {
+        printf("  ⚠ Threads insuficientes para cobrir a matriz em paralelo.\n");
+        printf("  ✓ Grid-Stride Loop ativado: cada thread processará múltiplos elementos.\n");
+    } else {
+        printf("  ✓ Cobertura total em paralelo.\n");
+    }
+    printf("========================================\n\n");
+    
+    // Inicializa estados cuRAND
+    setup_kernel<<<numBlocksGrid, threadsPerBlock>>>(d_states, initial_seed, N, M);
     cudaDeviceSynchronize(); 
 
     //init
-    FILE *time_file;
-    const char *file_name = "time_related/gpu_time.dat";
-    time_file = fopen(file_name, "a");
-    struct timespec start, end, _time;
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    struct timespec start;
+    init_clock(&start);
     int h_end_condition;
     for(i = 0; i < max_iter; i++){
         
-        execute_iter<<<num_blocks, num_threads>>>(d_current, d_next, N, M, d_states, d_total_dead);
+        // Usa configuração 2D
+        execute_iter<<<numBlocksGrid, threadsPerBlock>>>(d_current, d_next, N, M, d_states, d_total_dead);
         
         h_end_condition = ITERATION_END; // 0
         cudaMemcpy(d_end_condition, &h_end_condition, sizeof(int), cudaMemcpyHostToDevice);
@@ -316,7 +230,7 @@ int main(int argc, char **argv){
             fprintf(stderr, "CUDA Kernel launch failed: %s\n", cudaGetErrorString(err));
             break; 
         }
-        verify_end_kernel<<<num_blocks, num_threads>>>(d_next, N, M, d_end_condition);
+        verify_end_kernel<<<numBlocksGrid, threadsPerBlock>>>(d_next, N, M, d_end_condition);
         cudaDeviceSynchronize(); 
 
 
@@ -333,13 +247,7 @@ int main(int argc, char **argv){
         d_next = temp; 
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    sub_timespec(start, end, &_time);
-     
-    printf("Time elapsed: %d.%.9ld | Matrix Size: %d x %d | Threads: %d | Blocks %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, M, num_threads, num_blocks);
-    fprintf(time_file,"Time elapsed: %d.%.9ld | Matrix Size:%d x %d | Threads: %d | Blocks %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, M, num_threads, num_blocks);
-
-    fclose(time_file);
+    end_clock(start, N, M, threadsPerBlock.x, numBlocksGrid.x);
     cudaMemcpy(h_next_flat, d_current, size, cudaMemcpyDeviceToHost); //Copiando a matriz de iteração atual para o Host
 
     for (int r = 0; r < N; r++) {
