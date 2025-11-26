@@ -145,19 +145,6 @@ int main(int argc, char **argv) {
 
   printf("Sequential module initialized.\n");
 
-  // First, read N and M from file header
-  FILE *fp = fopen(input_path, "r");
-  if (fp == NULL) {
-    perror("Error opening input file");
-    return EXIT_FAILURE;
-  }
-  if (fscanf(fp, "%d %d\n", &N, &M) != 2) {
-    fprintf(stderr, "Error reading matrix dimensions\n");
-    fclose(fp);
-    return EXIT_FAILURE;
-  }
-  fclose(fp);
-
   // Allocate matrix A
   A = malloc(sizeof(int *) * N);
   for (int i = 0; i < N; i++) {

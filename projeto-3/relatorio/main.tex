@@ -41,12 +41,147 @@ Neste trabalho, é possível simular como que uma doença seria propagada com ba
 Neste trabalho foram medidos os tempos de execução tanto em uma execução serial (CPU.c) quanto em uma execução paralela (GPU.c) utilizando CUDA.
 
 \section{Metodologia}
-\subsection{Cálculo}
+\subsection{Processamento}
 
-\subsection{Testes}
+Para simularmos o espalhamento da doença, utilizamos uma matriz bidimensional onde cada célula representa um indivíduo. Cada indivíduo pode estar em um dos seguintes estados: Saudável (H - Healthy), Infectado (I - Infected), Ninguém (E - Empty) ou Morto (D - Dead). A simulação é realizada em passos de tempo discretos, onde em cada passo, o estado de cada indivíduo é atualizado com base nas regras de propagação da doença.
+
+
+
+\subsection{Implementação Serial (CPU)}
+
+A implementação serial processa cada célula da matriz sequencialmente, atualizando os estados com base nas regras de transição. Para cada iteração, o algoritmo verifica os vizinhos de cada célula saudável para determinar contaminação, e aplica probabilidades de cura (10\%), permanência infectada (30\%) ou morte (60\%) para células infectadas.
+
+\subsection{Implementação Paralela (GPU com CUDA)}
+
+A implementação paralela utiliza CUDA para processar múltiplas células simultaneamente. Foi implementado o padrão \textit{Grid-Stride Loop}, que permite que cada thread CUDA processe múltiplos elementos da matriz quando o número de threads é insuficiente para cobrir toda a matriz em uma única iteração.
+
+Características da implementação GPU:
+\begin{itemize}
+    \item \textbf{Kernel execute\_iter}: Processa as transições de estado de forma paralela
+    \item \textbf{Kernel verify\_end}: Verifica condição de término (ausência de células infectadas)
+    \item \textbf{Kernel setup\_kernel}: Inicializa geradores de números aleatórios (cuRAND) para cada célula
+    \item \textbf{Grid-Stride Loop}: Permite configurações flexíveis de threads/blocos
+\end{itemize}
+
+\subsection{Configurações de Teste}
+
+Foram realizados testes com duas matrizes de entrada:
+\begin{itemize}
+    \item \textbf{input\_small.dat}: Matriz 32×32 (1.024 elementos)
+    \item \textbf{realdata.dat}: Matriz 1024×1024 (1.048.576 elementos)
+\end{itemize}
+
+Para a implementação GPU, foram testadas 8 configurações diferentes de threads e blocos:
+\begin{enumerate}
+    \item 1 thread em 1 bloco (processamento quase serial)
+    \item 1024 threads em 1 bloco
+    \item 512 threads em 2 blocos
+    \item 256 threads em 4 blocos
+    \item 128 threads em 8 blocos
+    \item 32 threads em 32 blocos
+    \item 64 threads/bloco em 16 blocos (1024 threads totais)
+    \item 512 threads/bloco em 2048 blocos (1.048.576 threads totais)
+\end{enumerate}
 
 \section{Resultados}
 
+\subsection{Análise de Desempenho}
+
+Os tempos de execução obtidos demonstram claramente a vantagem do processamento paralelo em GPU, especialmente para matrizes maiores.
+
+\subsubsection{Matriz Pequena (32×32)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuração} & \textbf{Tempo (s)} & \textbf{Speedup} \\
+\midrule
+CPU (Serial) & 0.000049697 & 1.0× (baseline) \\
+GPU (1×1) & 0.001918768 & 0.03× (mais lento) \\
+GPU (1024×1) & 0.000257147 & 0.19× \\
+GPU (512×2) & 0.000211140 & 0.24× \\
+GPU (32×32) & 0.000186943 & 0.27× \\
+GPU (64×16) & 0.000296315 & 0.17× \\
+\bottomrule
+\end{tabular}
+\caption{Tempos de execução para matriz 32×32}
+\end{table}
+
+Para a matriz pequena, observamos que a CPU supera a GPU devido ao \textit{overhead} de transferência de dados entre host e device, além do custo de inicialização dos kernels CUDA. O tempo de setup do cuRAND e as transferências de memória (cerca de 4KB) dominam o tempo total de execução.
+
+\subsubsection{Matriz Grande (1024×1024)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuração} & \textbf{Tempo (s)} & \textbf{Speedup} \\
+\midrule
+CPU (Serial) & 0.050861174 & 1.0× (baseline) \\
+GPU (1×1) & 2.939634447 & 0.02× (mais lento) \\
+GPU (1024×1) & 0.019354557 & 2.63× \\
+GPU (512×2) & 0.018144702 & 2.80× \\
+GPU (256×4) & 0.017437922 & 2.92× \\
+GPU (128×8) & 0.017076928 & 2.98× \\
+GPU (1024×1024) & 0.003021590 & \textbf{16.83×} \\
+GPU (512×2048) & 0.002812409 & \textbf{18.08×} \\
+\bottomrule
+\end{tabular}
+\caption{Tempos de execução para matriz 1024×1024}
+\end{table}
+
+Para a matriz grande, a GPU demonstra aceleração significativa:
+\begin{itemize}
+    \item \textbf{Melhor resultado}: 512 threads/bloco × 2048 blocos alcançou \textbf{18.08× de speedup}
+    \item \textbf{Pior caso GPU}: 1 thread × 1 bloco foi 57× mais lento que CPU (processamento essencialmente serial com overhead de GPU)
+    \item \textbf{Tendência}: Quanto maior o paralelismo (mais threads/blocos), melhor o desempenho
+\end{itemize}
+
+\subsection{Análise de Corretude}
+
+Os resultados de saída mostram consistência entre as execuções:
+
+\textbf{Matriz 32×32:}
+\begin{itemize}
+    \item CPU: 397-415 mortes, 66-73 sobreviventes (variação devido à aleatoriedade)
+    \item GPU: 394 mortes, 74 sobreviventes (consistente entre todas as configurações)
+\end{itemize}
+
+\textbf{Matriz 1024×1024:}
+\begin{itemize}
+    \item CPU: 415.429 mortes, 58.151 sobreviventes
+    \item GPU: 415.363 mortes, 58.217 sobreviventes
+\end{itemize}
+
+A pequena diferença (66 mortes, 0.016\%) é aceitável e atribuída à natureza estocástica da simulação e diferentes implementações de geradores de números aleatórios (rand() vs cuRAND).
+
+\subsection{Observações Importantes}
+
+\begin{enumerate}
+    \item \textbf{Grid-Stride Loop}: Permitiu que configurações com poucas threads (1×1, 1024×1) ainda processassem toda a matriz corretamente, apenas de forma mais lenta.
+    
+    \item \textbf{Ocupação da GPU}: Configurações com mais blocos (1024×1024, 512×2048) maximizaram a utilização dos Streaming Multiprocessors (SMs) da GPU, resultando em melhor desempenho.
+    
+    \item \textbf{Overhead vs. Computação}: Para problemas pequenos, o overhead de transferência domina; para grandes, o ganho computacional compensa amplamente.
+\end{enumerate}
+
 \section{Conclusão}
+
+Este trabalho demonstrou com sucesso a aplicação de programação paralela com CUDA para simular a propagação de doenças em populações bidimensionais. Os resultados evidenciam que:
+
+\begin{enumerate}
+    \item \textbf{Escalabilidade}: O speedup da GPU aumenta proporcionalmente ao tamanho do problema. Para a matriz 1024×1024, alcançamos até 18× de aceleração.
+    
+    \item \textbf{Viabilidade}: Para problemas pequenos (32×32), a CPU serial permanece mais eficiente devido aos custos de overhead. Para problemas médios/grandes, a GPU torna-se indispensável.
+    
+    \item \textbf{Flexibilidade}: O padrão Grid-Stride Loop permitiu que o código se adaptasse a diferentes configurações de hardware e casos de teste, desde 1 thread até mais de 1 milhão de threads.
+    
+    \item \textbf{Corretude}: Os resultados entre CPU e GPU foram consistentes, validando a implementação paralela.
+\end{enumerate}
+
+A experiência adquirida neste projeto ressalta a importância de escolher a arquitetura adequada (CPU vs GPU) baseada no tamanho do problema e nos requisitos de desempenho. Para simulações epidemiológicas em larga escala, a GPU demonstrou ser uma ferramenta poderosa e eficaz.
+
+\textbf{Trabalhos Futuros}: Seria interessante explorar otimizações adicionais como uso de memória compartilhada (shared memory), operações assíncronas e análise de diferentes padrões de propagação de doenças (modelos SIR, SEIR, etc.).
 
 \end{document}

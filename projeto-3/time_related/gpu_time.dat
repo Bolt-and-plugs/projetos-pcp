@@ -1,21 +1,14 @@
-Time elapsed: 0.000176239 | Matrix Size:64 x 48 | Threads: 1 | Blocks 1
-Time elapsed: 0.000834456 | Matrix Size:64 x 48 | Threads: 64 | Blocks 1
-Time elapsed: 0.000607664 | Matrix Size:64 x 48 | Threads: 64 | Blocks 2
-Time elapsed: 0.001194475 | Matrix Size:64 x 48 | Threads: 64 | Blocks 4
-Time elapsed: 0.001674871 | Matrix Size:64 x 48 | Threads: 64 | Blocks 8
-Time elapsed: 0.002113466 | Matrix Size:64 x 48 | Threads: 64 | Blocks 64
-Time elapsed: 0.001388774 | Matrix Size:64 x 48 | Threads: 64 | Blocks 48
-Time elapsed: 0.000168325 | Matrix Size:256 x 198 | Threads: 1 | Blocks 1
-Time elapsed: 0.002294266 | Matrix Size:256 x 198 | Threads: 256 | Blocks 1
-Time elapsed: 0.003155070 | Matrix Size:256 x 198 | Threads: 256 | Blocks 2
-Time elapsed: 0.002625796 | Matrix Size:256 x 198 | Threads: 256 | Blocks 4
-Time elapsed: 0.001459717 | Matrix Size:256 x 198 | Threads: 256 | Blocks 8
-Time elapsed: 0.001840485 | Matrix Size:256 x 198 | Threads: 256 | Blocks 256
-Time elapsed: 0.002838962 | Matrix Size:256 x 198 | Threads: 256 | Blocks 198
-Time elapsed: 0.000865573 | Matrix Size:1024 x 968 | Threads: 1 | Blocks 1
-Time elapsed: 0.001337687 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 1
-Time elapsed: 0.001035455 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 2
-Time elapsed: 0.003723025 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 4
-Time elapsed: 0.001837973 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 8
-Time elapsed: 0.004451615 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 1024
-Time elapsed: 0.004595877 | Matrix Size:1024 x 968 | Threads: 1024 | Blocks 968
+Time elapsed: 0.001918768 | Matrix Size:32 x 32 | Block Config: 1 threads, 1 blocks
+Time elapsed: 0.000257147 | Matrix Size:32 x 32 | Block Config: 1024 threads, 1 blocks
+Time elapsed: 0.000211140 | Matrix Size:32 x 32 | Block Config: 512 threads, 2 blocks
+Time elapsed: 0.000304779 | Matrix Size:32 x 32 | Block Config: 256 threads, 4 blocks
+Time elapsed: 0.000228689 | Matrix Size:32 x 32 | Block Config: 128 threads, 8 blocks
+Time elapsed: 0.000186943 | Matrix Size:32 x 32 | Block Config: 32 threads, 32 blocks
+Time elapsed: 0.000296315 | Matrix Size:32 x 32 | Block Config: 64 threads, 16 blocks
+Time elapsed: 2.939634447 | Matrix Size:1024 x 1024 | Block Config: 1 threads, 1 blocks
+Time elapsed: 0.019354557 | Matrix Size:1024 x 1024 | Block Config: 1024 threads, 1 blocks
+Time elapsed: 0.018144702 | Matrix Size:1024 x 1024 | Block Config: 512 threads, 2 blocks
+Time elapsed: 0.017437922 | Matrix Size:1024 x 1024 | Block Config: 256 threads, 4 blocks
+Time elapsed: 0.017076928 | Matrix Size:1024 x 1024 | Block Config: 128 threads, 8 blocks
+Time elapsed: 0.003021590 | Matrix Size:1024 x 1024 | Block Config: 1024 threads, 1024 blocks
+Time elapsed: 0.002812409 | Matrix Size:1024 x 1024 | Block Config: 512 threads, 2048 blocks

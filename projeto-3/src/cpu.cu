@@ -4,109 +4,19 @@
 #include <cuda_runtime.h>
 #include "utils.h" 
 
-#define ITERATION_END 404
-#define ITERATION_CONTINUE 101
-
-#define CURADA 1
-#define CONTAMINADA -1
-#define MORTA -2
-#define NINGUEM 0
-
-
 #define GET_STATE(R, C) \
     (((R) >= 0 && (R) < N && (C) >= 0 && (C) < M) ? A_current[(R) * M + (C)] : 0)
-
-
-void read_input(const char *path, int ***A, int *N, int *M) {
-    FILE *fp = fopen(path, "r");
-
-
-    if (fp == NULL) {
-        perror("Error opening file");
-        exit(EXIT_FAILURE);
-    }
-    if (fscanf(fp, "%d %d", N, M) != 2) {
-        fprintf(stderr, "Error reading N, M\n");
-        fclose(fp);
-        exit(EXIT_FAILURE);
-    }
-    *A = (int**)malloc(sizeof(int*) * (*N));
-    for (int i = 0; i < *N; i++) {
-        (*A)[i] = (int*)malloc(sizeof(int) * (*M));
-        if ((*A)[i] == NULL) {
-            perror("Could not allocate A row");
-            // free previously allocated rows
-            for (int j = 0; j < i; j++) {
-                free((*A)[j]);
-            }
-            free((*A));
-            exit(1);
-        }
-    }
-
-    for (int i = 0; i < *N; i++) {
-        for (int j = 0; j < *M; j++) {
-            if (fscanf(fp, "%d", &(*A)[i][j]) != 1) {
-                fprintf(stderr, "Error reading matrix data at A[%d][%d]\n", i, j);
-                fclose(fp);
-                exit(EXIT_FAILURE);
-            }
-        }
-    }
-
-    // printing the input matrix for verification
-    //print_matrix(*A, *N, *M);
-
-    fclose(fp);
-}
 
 int verify_end_population(int **A, int N, int M) {
     for(int i = 0; i < N; i++) {
         for(int j = 0; j < M; j++) {
-            if (A[i][j] == CONTAMINADA || A[i][j] == MORTA) {
+            if (A[i][j] == INFECTED || A[i][j] == DEAD) {
                 return ITERATION_CONTINUE;
             }
         }
     }
     return ITERATION_END;
 }
-
-
-void write_output(const char *output_path, int **A, int N, int M, int total_dead) {
-    long total_survivors = 0; 
-    long total_nobody = 0;
-    int total_deaths = 0;
-    
-    // printing the final matrix for verification
-    //print_matrix(A, N, M);
-    
-    // Conta apenas sobreviventes (vivos curados ou contaminados)
-    for (int r = 0; r < N; r++) {
-        for (int c = 0; c < M; c++) {
-            if (A[r][c] == CURADA || A[r][c] == CONTAMINADA) {
-                total_survivors++;
-            }
-            else if (A[r][c] == NINGUEM) {
-                total_nobody++;
-            }
-            else {
-                total_deaths++;
-            }
-        }
-    }
-
-    FILE *fp = fopen(output_path, "w");
-    if (fp == NULL) {
-        perror("Error opening output file");
-        return;
-    }
-
-    fprintf(fp, "%d %ld\n", total_dead, total_survivors);
-    
-    fclose(fp);
-    printf("Resultados escritos em: %s\n", output_path);
-}    
-
 
 __host__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, int *total_dead) {
     int total_elements = N * M;
@@ -119,33 +29,33 @@ __host__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, int
         int current_state = A_current[index];
         int next_state = current_state; 
 
-        if (current_state == CURADA) { 
+        if (current_state == HEALTHY) { 
             int neighbor_up    = GET_STATE(r - 1, c);
             int neighbor_down  = GET_STATE(r + 1, c);
             int neighbor_left  = GET_STATE(r, c - 1);
             int neighbor_right = GET_STATE(r, c + 1);
 
             if (neighbor_up < 0 || neighbor_down < 0 || neighbor_left < 0 || neighbor_right < 0) {
-                next_state = CONTAMINADA; 
+                next_state = INFECTED; 
             }
         }
-        else if (current_state == CONTAMINADA) {
+        else if (current_state == INFECTED) {
 
 
             
             int x = rand()% 10000;
             
             if (x <= 999) { // 0.1 
-                next_state = CURADA; 
+                next_state = HEALTHY; 
             } else if (x <= 3999) { // 0.3
-                next_state = CONTAMINADA; 
+                next_state = INFECTED; 
             } else { // 0.6
-                next_state = MORTA;
+                next_state = DEAD;
                 (*total_dead)++;
             }
         }
-        else if(current_state == MORTA){
-            next_state = NINGUEM;
+        else if(current_state == DEAD){
+            next_state = EMPTY;
         }
 
         A_next[index] = next_state;
@@ -153,20 +63,6 @@ __host__ void execute_iter_serial(int *A_current, int *A_next, int N, int M, int
 }
 
 enum { NS_PER_SECOND = 1000000000 };
-
-void sub_timespec(struct timespec t1, struct timespec t2, struct timespec *td) {
-  td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
-  td->tv_sec = t2.tv_sec - t1.tv_sec;
-  if (td->tv_sec > 0 && td->tv_nsec < 0) {
-    td->tv_nsec += NS_PER_SECOND;
-    td->tv_sec--;
-  } else if (td->tv_sec < 0 && td->tv_nsec > 0) {
-    td->tv_nsec -= NS_PER_SECOND;
-    td->tv_sec++;
-  }
-}
-
-
 
 int main(int argc, char **argv){
     
@@ -190,7 +86,7 @@ int main(int argc, char **argv){
     int total_dead = 0;
     for(int i=0;i<N;i++){
         for(int j=0;j<M;j++){
-            if(space[i][j]==MORTA) total_dead++;
+            if(space[i][j]==DEAD) total_dead++;
         }
     }
 

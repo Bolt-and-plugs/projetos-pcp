@@ -1,3 +1,2 @@
-Time elapsed: 0.000157898 | Matrix Size:64 x 48
-Time elapsed: 0.001935458 | Matrix Size:256 x 198
-Time elapsed: 0.065284598 | Matrix Size:1024 x 968
+Time elapsed: 0.000049697 | Matrix Size:32 x 32
+Time elapsed: 0.050861174 | Matrix Size:1024 x 1024
