@@ -1,13 +1,13 @@
 ---
 id: task-9
 title: saida de dados
-status: To Do
+status: Done
 assignee: []
 created_date: '2025-11-18 19:13'
-updated_date: '2025-11-18 19:13'
+updated_date: '2025-11-19 00:00'
 labels: []
 dependencies: []
-ordinal: 500
+ordinal: 5000
 ---
 
 ## Description

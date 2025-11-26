@@ -51,7 +51,6 @@ void seq_process(int **A, int N, int M) {
         continue;
       }
 
-      srand(time(NULL));
       rand_int = rand() % 10000;
 
       bool has_infetected_nearby = (
@@ -175,7 +174,7 @@ int main(int argc, char **argv) {
   }
 
   // logic
-  measure_fn_time(seq_worker, A, N, M);
+  measure_fn_time(seq_worker, A, N, M, &g_iteration);
 
   // cleanup buff_write
   for (int i = 0; i < N; i++) {
@@ -184,7 +183,7 @@ int main(int argc, char **argv) {
   free(buff_write);
 
   // output
-  write_file(output_path, A, N, M);
+  // write_file(output_path, A, N, M);
   
   // cleanup A
   for (int i = 0; i < N; i++) {

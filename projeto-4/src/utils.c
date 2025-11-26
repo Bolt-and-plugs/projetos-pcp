@@ -107,7 +107,7 @@ void print_mat(long double **x, int N, int M) {
 
 
 void measure_fn_time(void *(fn)(int **, int, int), int **A, int N,
-                     int M) {
+                     int M, int *iterations) {
   FILE *file;
   puts("Initializing sequential execution");
   const char *file_name = "assets/output/time_measure.txt";
@@ -117,25 +117,11 @@ void measure_fn_time(void *(fn)(int **, int, int), int **A, int N,
   fn(A, N, M);
   clock_gettime(CLOCK_MONOTONIC, &end);
   sub_timespec(start, end, &_time);
-  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
+  fprintf(file,"Tipo: Sequencial | Processos: 1 | Tempo: %d.%.9ld s | Tamanho Matriz: %d | Iterações: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N, *iterations);
   fclose(file);
 }
 
-void measure_fn_mpi_time(void *(fn)(int **, int, int, int), int **A, int N,
-                     int M, int rank) {
-  FILE *file;
-  const char *file_name = "assets/output/mpi_time_measure.txt";
-  struct timespec start, end, _time;
 
-  puts("Initializing mpi execution");
-  file = fopen(file_name, "a");
-  clock_gettime(CLOCK_MONOTONIC, &start);
-  fn(A, N, M, rank);
-  clock_gettime(CLOCK_MONOTONIC, &end);
-  sub_timespec(start, end, &_time);
-  fprintf(file,"Time elapsed: %d.%.9ld | Matrix Size: %d\n" , (int)_time.tv_sec, _time.tv_nsec, N);
-  fclose(file);
-}
 
 // queue
 bool init_queue(Queue **q, int x, int y) {
@@ -214,4 +200,3 @@ bool push(Queue **head, int x, int y) {
   sem_post(&mutex);
   return true;
 }
-

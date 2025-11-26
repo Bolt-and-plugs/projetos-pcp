@@ -1,0 +1,2 @@
+Tipo: Sequencial | Processos: 1 | Tempo: 0.373094623 s | Tamanho Matriz: 1024 | Iterações: 16
+Tipo: Paralelo | Processos: 1 | Tempo: 0.342826358 s | Tamanho Matriz: 1024 | Iterações: 15

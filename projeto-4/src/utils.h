@@ -26,9 +26,7 @@ void print_arr(long double *x, int N);
 
 void print_mat(long double **x, int N, int M);
 
-void measure_fn_time(void *(fn)(int **, int, int), int **A, int N, int M);
-
-void measure_fn_mpi_time(void *(fn)(int **, int, int, int), int **A, int N, int M, int rank);
+void measure_fn_time(void *(fn)(int **, int, int), int **A, int N, int M, int *iterations);
 
 
 bool init_queue(Queue **q, int x, int y);
